@@ -40,31 +40,101 @@ git clone https://github.com/dull-bird/external-cli.git
 cp -r external-cli ~/.agents/skills/external-cli
 ```
 
-## 快速上手
+## 30 秒演示
 
 ```bash
-# 自动扫描系统中的所有 CLI 工具
-python3 ~/.agents/skills/external-cli/scripts/cli-registry.py discover
+# 1. 一键发现系统里所有 CLI 工具
+$ python3 cli-registry.py discover
 
-# 注册指定工具
-python3 ~/.agents/skills/external-cli/scripts/cli-registry.py register jq --desc "JSON 处理器"
+Found: jq ...    Registered: jq (15 subcommands, 8 flags)
+Found: fzf ...   Registered: fzf (3 subcommands, 6 flags)
+Found: gh ...    Registered: gh (25 subcommands, 0 flags)
+Found: rg ...    Registered: rg (10 subcommands, 8 flags)
+Found: mihomo ...Registered: mihomo (official skill: takes priority)
+Found: opencli ..Registered: opencli (official skill: takes priority)
+...
 
-# 列出已注册的工具
-python3 ~/.agents/skills/external-cli/scripts/cli-registry.py list
+Registered 13 new CLI tools.
 
-# 查看工具详情（命令、参数、help）
-python3 ~/.agents/skills/external-cli/scripts/cli-registry.py lookup git
+# 2. 查看注册了哪些工具
+$ python3 cli-registry.py list
+
+NAME          BINARY       OFFICIAL  SUBS  DESCRIPTION
+─────────────────────────────────────────────────────────
+curl          curl         -           0   External CLI: curl
+gh            gh           -          25   External CLI: gh
+git           git          -          19   Distributed version control
+jq            jq           -          15   External CLI: jq
+mihomo        mihomo       yes         0   External CLI: mihomo
+opencli       opencli      yes         0   External CLI: opencli
+...
+
+# 3. 查看某个工具（子命令、参数、help）
+$ python3 cli-registry.py lookup gh
+
+# CLI: gh
+Binary: gh
+
+## Subcommands (25)
+  auth              Authenticate gh with GitHub
+  browse            Open the repository in the browser
+  codespace         Connect to and manage codespaces
+  gist              Manage gists
+  issue             Manage issues
+  pr                Manage pull requests
+  release           Manage releases
+  repo              Manage repositories
+...
 ```
 
-## 优先级机制
+## Agent 实际交互演示
 
-| 优先级 | 来源 | 条件 |
-|--------|------|------|
-| 🥇 最高 | 官方 `SKILL.md` | `~/.agents/skills/<tool>/SKILL.md` 存在 |
-| 🥈 中等 | 注册表 JSON | 工具已注册且缓存了 help |
-| 🥉 最低 | 实时 `--help` | 任何未注册的工具都能现场学 |
+```
+ 👤 User:    "用 jq 把 data.json 里的所有 name 字段提取出来"
+            ─────────────────────────────────────────────
+ 🤖 Agent:  [检查: ~/.agents/skills/jq/SKILL.md → 不存在]
+            [查注册表: jq.json → 找到, 15 个子命令]
+            [执行: jq '.[].name' data.json]
+            ─────────────────────────────────────────────
+            ["Alice", "Bob", "Charlie"]
 
-官方 Skill 永远优先。CLI 作者以后出了官方 Skill，注册表自动退让，无需额外清理。
+ 👤 User:    "用 gh 看看我 open 的 PR"
+            ─────────────────────────────────────────────
+ 🤖 Agent:  [检查: ~/.agents/skills/gh/SKILL.md → 不存在]
+            [查注册表: gh.json → 找到, 有 'pr' 子命令]
+            [执行: gh pr list --state open]
+            ─────────────────────────────────────────────
+            #1 Add login page   about 2 hours ago
+            #3 Fix navbar       about 1 day ago
+
+ 👤 User:    "切到日本节点"
+            ─────────────────────────────────────────────
+ 🤖 Agent:  [检查: mihomo/SKILL.md → 存在!]
+            [官方 Skill 优先]
+            [执行: mihomo start; mihomo switch-node "日本 1 | SS | ZJ"]
+```
+
+## 优先级在行动
+
+```
+用户: "切到日本节点"
+        │
+        ├─ mihomo/SKILL.md  存在 → ✅ 直接用
+        │  (手写的 Skill，知道 start/stop/sub/specific scripts)
+        │
+用户: "gh pr list"
+        │
+        ├─ gh/SKILL.md  不存在 → 跳过
+        │  └─ registry/gh.json  存在 → ✅ 用注册表
+        │     (缓存了 25 个 --help 子命令)
+        │
+用户: "xsv select name data.csv"
+        │
+        ├─ xsv/SKILL.md  不存在 → 跳过
+        │  └─ registry/xsv.json  不存在 → 跳过
+        │     └─ xsv --help  → ✅ 现场学习
+        │        (解析输出，构造命令，顺手注册)
+```
 
 ## 注册表格式
 
@@ -77,14 +147,22 @@ python3 ~/.agents/skills/external-cli/scripts/cli-registry.py lookup git
   "description": "JSON 处理器",
   "official_skill": null,
   "auto_discovered": {
-    "subcommands": [...],
-    "flags": [...],
-    "help_raw": "..."
+    "subcommands": [
+      {"name": "filter", "desc": "Apply a filter to the input JSON"},
+      {"name": "map", "desc": "Transform each element of an array"}
+    ],
+    "flags": [
+      {"flag": "-r", "desc": "Raw output (no JSON quoting)"},
+      {"flag": "-c", "desc": "Compact output"}
+    ],
+    "help_raw": "jq - commandline JSON processor ..."
   }
 }
 ```
 
-没有 YAML，没有 markdown，纯粹的机器可读数据。轻量到可以管理几百个工具。
+不用 YAML，不用 markdown。纯粹的机器可读数据，几百个工具也毫无压力。
+
+完整示例见 [examples/registry-entry.json](examples/registry-entry.json)。
 
 ## 命令一览
 

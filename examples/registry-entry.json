@@ -1,0 +1,23 @@
+{
+  "name": "jq",
+  "binary": "jq",
+  "description": "Command-line JSON processor",
+  "official_skill": null,
+  "registered_at": "2026-05-12T00:25:00.000000",
+  "auto_discovered": {
+    "binary": "jq",
+    "subcommands": [
+      {"name": "filter", "desc": "Apply a filter to the input JSON"},
+      {"name": "map", "desc": "Transform each element of an array"},
+      {"name": "sort", "desc": "Sort arrays and objects"},
+      {"name": "keys", "desc": "Extract keys from objects"}
+    ],
+    "flags": [
+      {"flag": "-r", "value": "", "desc": "Raw output (no JSON quoting)"},
+      {"flag": "-c", "value": "", "desc": "Compact output"},
+      {"flag": "-s", "value": "", "desc": "Slurp: read all inputs into an array"},
+      {"flag": "-n", "value": "", "desc": "Null input mode"}
+    ],
+    "help_raw": "jq - commandline JSON processor [version 1.7]\nUsage: jq [options] <filter> [files]\n..."
+  }
+}
