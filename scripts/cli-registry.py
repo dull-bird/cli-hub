@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """cli-hub — CLI Registry — unified management for external CLI tools.
 
-Reads/writes lightweight JSON registry entries in ~/.openclaw/cli-registry/.
-Powers the cli-hub OpenClaw AgentSkill.
+Reads/writes lightweight JSON registry entries. Powers the cli-hub AgentSkill.
+Compatible with OpenClaw, Claude Code, Codex CLI, Cursor, Aider.
 
 Usage:
     python3 cli-registry.py register <name> [--binary <bin>] [--desc <text>]
@@ -23,11 +23,10 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 REGISTRY_DIR = Path.home() / ".openclaw" / "cli-registry"
 SKILLS_DIR = Path.home() / ".agents" / "skills"
 
-# Common CLI binaries to scan during discover
 KNOWN_CLIS = [
     "jq", "yq", "fzf", "rg", "fd", "bat", "eza", "gh", "docker",
     "kubectl", "helm", "terraform", "aws", "gcloud", "az",
@@ -44,7 +43,6 @@ KNOWN_CLIS = [
 # ── helpers ────────────────────────────────────────────────────
 
 def _run(cmd, timeout=10):
-    """Run command and return (code, stdout, stderr)."""
     try:
         r = subprocess.run(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -58,14 +56,12 @@ def _run(cmd, timeout=10):
 
 
 def _whereis(binary):
-    """Check if binary exists on PATH."""
     return subprocess.call(["which", binary],
                            stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL) == 0
 
 
 def _find_official_skill(name):
-    """Check if an official SKILL.md exists for this CLI."""
     for root in [SKILLS_DIR, Path.home() / ".openclaw" / "skills"]:
         sp = root / name / "SKILL.md"
         if sp.is_file():
@@ -78,93 +74,147 @@ def _find_official_skill(name):
 
 # ── help extraction ─────────────────────────────────────────────
 
-def _extract_help(binary):
-    """Run <binary> --help and extract subcommands, flags, and raw text."""
-    result = {"binary": binary, "subcommands": [], "flags": [], "examples": []}
+def _fetch_help_text(binary, subcommand=None):
+    """Get help text trying --help, -h, help, man, bare invocation."""
+    if subcommand:
+        attempts = [
+            [binary, subcommand, "-h"],        # short help first (avoid man pages)
+            [binary, subcommand, "--help"],
+            [binary, "help", subcommand],
+        ]
+    else:
+        attempts = [
+            [binary, "--help"],
+            [binary, "-h"],
+            [binary, "help"],
+        ]
 
-    # Try --help, -h, help in order
-    for flag in ["--help", "-h", "help"]:
-        code, out, err = _run([binary, flag], timeout=15)
+    for cmd in attempts:
+        code, out, err = _run(cmd, timeout=15)
         output = (out + err).strip()
         if len(output) > 80:
-            result["help_raw"] = output[:8192]
-            break
-    else:
-        code, out, err = _run([binary], timeout=10)
-        output = (out + err).strip()
-        if output:
-            result["help_raw"] = output[:8192]
+            return output
 
-    if not result.get("help_raw"):
-        result["help_raw"] = "{} — help unavailable".format(binary)
-        return result
+    # man page fallback
+    code, out, err = _run(["man", binary], timeout=10)
+    if len(out.strip()) > 80:
+        return out.strip()[:16384]
 
-    text = result["help_raw"]
+    # bare invocation
+    code, out, err = _run([binary], timeout=10)
+    output = (out + err).strip()
+    return output if output else ""
 
-    # ── subcommand extraction ──
-    # Pattern A: "  command    description" (argparse, cobra, clap)
-    # Pattern B: "   command   description" (git style)
-    # Pattern C: bullet lists "* command: desc"
+
+def _extract_help(binary):
+    """Extract structured help: usage, subcommands with options, global options."""
+    text = _fetch_help_text(binary)
+    if not text:
+        return {"binary": binary, "help_raw": "{} — help unavailable".format(binary)}
+
+    result = {
+        "binary": binary,
+        "help_raw": text[:12288],
+        "usage": _extract_usage(text),
+        "subcommands": {},
+        "global_options": [],
+    }
+
     subs = _parse_subcommands(text)
-    result["subcommands"] = subs[:25]
+    top_subs = subs[:12]
 
-    # ── flag extraction ──
-    flags = _parse_flags(text)
-    result["flags"] = flags[:20]
+    result["global_options"] = _parse_options(text)
+
+    for s in top_subs:
+        name = s["name"]
+        sub_help = _fetch_help_text(binary, name)
+        sub_info = {
+            "desc": s["desc"],
+            "usage": _extract_usage(sub_help) if sub_help else "",
+            "options": _parse_options(sub_help) if sub_help else [],
+        }
+        result["subcommands"][name] = sub_info
 
     return result
 
 
+def _extract_usage(text):
+    """Extract usage line(s)."""
+    lines = []
+    in_usage = False
+    for line in text.split("\n"):
+        s = line.strip()
+        if re.match(r'^(usage|用法|使用方式|使い方)\s*[:：]', s, re.I):
+            in_usage = True
+            continue
+        if in_usage:
+            if s == "" or re.match(r'^[A-Z][a-z]+(\s+[a-z]+)*\s*[:：]', s):
+                break
+            if len(s) > 5:
+                lines.append(s)
+    if not lines:
+        for line in text.split("\n"):
+            s = line.strip()
+            if s and not s.startswith("#") and len(s) > 10:
+                lines.append(s)
+                break
+    return "\n".join(lines[:5])
+
+
 def _parse_subcommands(text):
-    """Extract subcommands from help text using multiple patterns."""
+    """Extract subcommands from indented help text."""
     subs = []
     seen = set()
-
-    # Common noise words to exclude
-    noise = {"or", "and", "the", "for", "see", "a", "an", "of", "to", "in",
-             "usage", "options", "commands", "examples", "arguments", "flags",
-             "help", "all", "on", "off", "yes", "no", "true", "false",
-             "be", "is", "it", "if", "by", "at", "also", "note", "use"}
-
-    # Pattern 1: indented "  name  desc" (argparse / click style)
-    for m in re.finditer(r'(?m)^\s{2,}([a-z][a-z0-9_-]{2,30})\s{2,}(.+)', text):
-        name, desc = m.group(1), m.group(2).strip()[:120]
+    noise = {
+        "or", "and", "the", "for", "see", "a", "an", "of", "to", "in",
+        "usage", "options", "commands", "examples", "arguments", "flags",
+        "help", "all", "on", "off", "yes", "no", "true", "false",
+        "be", "is", "it", "if", "by", "at", "also", "note", "use",
+        "after", "before", "with", "from", "into", "out", "up", "per",
+    }
+    for m in re.finditer(r'(?m)^\s{2,}([a-z][a-z0-9._-]{2,30})\s{2,}(.+)', text):
+        name, desc = m.group(1), m.group(2).strip()[:150]
+        name = name.rstrip("._")
         if name.lower() not in noise and name not in seen:
             seen.add(name)
             subs.append({"name": name, "desc": desc})
-
-    # Pattern 2: "  * name: desc" or "  - name: desc"
-    for m in re.finditer(r'(?m)^\s*[-*]\s+([a-z][a-z0-9_-]{2,30}):?\s*(.*)', text):
-        name, desc = m.group(1), m.group(2).strip()[:120]
-        if name.lower() not in noise and name not in seen:
-            seen.add(name)
-            subs.append({"name": name, "desc": desc})
-
     return subs
 
 
-def _parse_flags(text):
-    """Extract flags from help text."""
-    flags = []
+def _parse_options(text):
+    """Extract options/flags with types."""
+    options = []
     seen = set()
-
-    for m in re.finditer(r'(?m)(-{1,2}[\w][\w-]*)(?:\s+(\w+))?\s*(.{0,80})', text):
-        flag = m.group(1)
-        if flag in ("-h", "--help", "-v", "--version"):
+    skip = {"-h", "--help", "-v", "--version", "-V"}
+    for m in re.finditer(
+        r'(?m)^\s{0,6}(-{1,2}[\w][\w-]*(?:,\s*-{1,2}[\w][\w-]*)?)'
+        r'(?:\s+(?!-)\S+)?\s{2,}(.+)',
+        text
+    ):
+        flag_group = m.group(1)
+        desc = m.group(2).strip()[:120] if m.group(2) else ""
+        flags = [f.strip() for f in flag_group.split(",")]
+        primary = next((f for f in flags if f.startswith("--")), flags[0])
+        if primary in skip:
             continue
-        value = m.group(2) if m.group(2) and not m.group(2).startswith("-") else ""
-        desc = m.group(3).strip() if m.group(3) else ""
-        if flag not in seen:
-            seen.add(flag)
-            flags.append({"flag": flag, "value": value, "desc": desc[:80]})
-
-    return flags
+        value = ""
+        type_match = re.search(r'(?:<([^>]+)>|\[=?(.+?)\])', desc)
+        if type_match:
+            value = type_match.group(1) or type_match.group(2)
+        if primary not in seen:
+            seen.add(primary)
+            options.append({
+                "flag": primary,
+                "aliases": [f for f in flags if f != primary],
+                "value": value,
+                "desc": desc[:100]
+            })
+    return options[:25]
 
 
 # ── commands ─────────────────────────────────────────────────────
 
 def cmd_register(args):
-    """Register a CLI tool in the registry."""
     name = args.cli
     binary = args.binary or name
     desc = args.desc or ""
@@ -191,14 +241,12 @@ def cmd_register(args):
     print("Registered: {} -> {}".format(name, path))
     if official:
         print("   Official skill: {} (takes priority)".format(official))
-    n_subs = len(info.get("subcommands", []))
-    n_flags = len(info.get("flags", []))
-    if n_subs or n_flags:
-        print("   Discovered: {} subcommands, {} flags".format(n_subs, n_flags))
+    subs = info.get("subcommands", {})
+    opts = info.get("global_options", [])
+    print("   Discovered: {} subcommands with detail, {} global options".format(len(subs), len(opts)))
 
 
 def cmd_list(args):
-    """List all registered CLI tools."""
     entries = sorted(REGISTRY_DIR.glob("*.json"))
     if not entries:
         print("No CLI tools registered.")
@@ -214,27 +262,27 @@ def cmd_list(args):
                 "binary": d.get("binary"),
                 "description": d.get("description"),
                 "has_official_skill": bool(d.get("official_skill")),
-                "subcommands": len(ad.get("subcommands", [])),
-                "flags": len(ad.get("flags", [])),
+                "subcommands": len(ad.get("subcommands", {})),
+                "global_options": len(ad.get("global_options", [])),
             }
         print(json.dumps(result, indent=2, ensure_ascii=False))
     else:
-        header = "{:<22s} {:<17s} {:<10s} {:>5s}  {}".format(
-            "NAME", "BINARY", "OFFICIAL", "SUBS", "DESCRIPTION")
+        header = "{:<22s} {:<17s} {:<10s} {:>5s} {:>5s}  {}".format(
+            "NAME", "BINARY", "OFFICIAL", "SUBS", "OPTS", "DESCRIPTION")
         print(header)
-        print("-" * 80)
+        print("-" * 90)
         for e in entries:
             d = json.loads(e.read_text(encoding="utf-8"))
             official = "yes" if d.get("official_skill") else "-"
             ad = d.get("auto_discovered", {})
-            subs = len(ad.get("subcommands", []))
-            print("{:<22s} {:<17s} {:<10s} {:>5d}  {}".format(
+            subs = len(ad.get("subcommands", {}))
+            opts = len(ad.get("global_options", []))
+            print("{:<22s} {:<17s} {:<10s} {:>5d} {:>5d}  {}".format(
                 d["name"], d.get("binary", d["name"]),
-                official, subs, d.get("description", "")[:40]))
+                official, subs, opts, d.get("description", "")[:35]))
 
 
 def cmd_lookup(args):
-    """Show full registry info for a CLI tool."""
     path = REGISTRY_DIR / "{}.json".format(args.cli)
     if not path.is_file():
         print("Not registered: {}".format(args.cli))
@@ -248,33 +296,41 @@ def cmd_lookup(args):
     if d.get("description"):
         print("Description: {}".format(d["description"]))
     if d.get("official_skill"):
-        print("Official Skill: {}".format(d["official_skill"]))
-        print("> CHECK official skill FIRST for authoritative instructions")
-    print("Registered: {}".format(d.get("registered_at", "unknown")))
+        print("Official Skill: {} (takes priority)".format(d["official_skill"]))
 
     ad = d.get("auto_discovered", {})
-    subs = ad.get("subcommands", [])
-    flags = ad.get("flags", [])
-    raw = ad.get("help_raw", "")
 
+    usage = ad.get("usage")
+    if usage:
+        print("\n## Usage")
+        print("```")
+        print(usage)
+        print("```")
+
+    globals_opts = ad.get("global_options", [])
+    if globals_opts:
+        print("\n## Global Options ({})".format(len(globals_opts)))
+        for o in globals_opts[:10]:
+            v = " <{}>".format(o["value"]) if o.get("value") else ""
+            aliases = " ({})".format(", ".join(o["aliases"])) if o.get("aliases") else ""
+            print("  {}{}  {} {}".format(o["flag"], v, o.get("desc", ""), aliases))
+
+    subs = ad.get("subcommands", {})
     if subs:
         print("\n## Subcommands ({})".format(len(subs)))
-        for s in subs[:20]:
-            print("  {:<22s} {}".format(s["name"], s["desc"]))
-
-    if flags:
-        print("\n## Flags ({})".format(len(flags)))
-        for f in flags[:15]:
-            val = " <{}>".format(f["value"]) if f.get("value") else ""
-            print("  {}{:<14s} {}".format(f["flag"], val, f.get("desc", "")))
-
-    if raw:
-        print("\n## Raw Help ({} chars)".format(len(raw)))
-        print(raw[:3000])
+        for name, info in subs.items():
+            print("\n### {} — {}".format(name, info.get("desc", "")))
+            sub_usage = info.get("usage")
+            if sub_usage:
+                print("  Usage: `{}`".format(sub_usage.split("\n")[0][:120]))
+            sub_opts = info.get("options", [])
+            if sub_opts:
+                for o in sub_opts[:8]:
+                    v = " <{}>".format(o["value"]) if o.get("value") else ""
+                    print("    {} {}  {}".format(o["flag"], v, o.get("desc", "")[:60]))
 
 
 def cmd_discover(args):
-    """Auto-scan PATH for known CLI binaries and register them."""
     count = 0
     for binary in KNOWN_CLIS:
         if (REGISTRY_DIR / "{}.json".format(binary)).is_file():
@@ -288,7 +344,6 @@ def cmd_discover(args):
             except Exception as exc:
                 print("failed ({})".format(exc))
 
-    # Also scan extra path if given
     if args.scan_path:
         sp = Path(args.scan_path)
         if sp.is_dir():
@@ -308,7 +363,6 @@ def cmd_discover(args):
 
 
 def cmd_remove(args):
-    """Remove a CLI from the registry."""
     path = REGISTRY_DIR / "{}.json".format(args.cli)
     if path.is_file():
         path.unlink()
@@ -318,29 +372,20 @@ def cmd_remove(args):
 
 
 def cmd_help_cli(args):
-    """Fetch live --help for a CLI (registered or not)."""
     binary = args.cli
     p = REGISTRY_DIR / "{}.json".format(args.cli)
     if p.is_file():
         binary = json.loads(p.read_text(encoding="utf-8")).get("binary", binary)
-
-    code, out, err = _run([binary, "--help"], timeout=10)
-    if code != 0:
-        code, out, err = _run([binary, "-h"], timeout=10)
-    if code != 0:
-        code, out, err = _run([binary, "help"], timeout=10)
-    output = (out + err).strip()
+    output = _fetch_help_text(binary)
     if output:
         print(output[:5000])
     else:
         print("No help output from {}".format(binary))
 
 
-# ── main ─────────────────────────────────────────────────────────
-
 def main():
     parser = argparse.ArgumentParser(
-        description="CLI Registry for OpenClaw cli-hub Skill",
+        description="CLI Registry for cli-hub AgentSkill",
         prog="cli-registry")
     parser.add_argument("--version", action="version", version=VERSION)
 
@@ -351,7 +396,8 @@ def main():
     p.add_argument("cli", help="CLI name")
     p.add_argument("--binary", help="Binary name if different")
     p.add_argument("--desc", help="Description")
-    p.add_argument("--force", action="store_true", help="Register even if binary not on PATH")
+    p.add_argument("--force", action="store_true",
+                   help="Register even if binary not on PATH")
 
     p = sub.add_parser("list", help="List registered CLIs")
     p.add_argument("--format", default="table", choices=["table", "json"])
@@ -360,7 +406,7 @@ def main():
     p.add_argument("cli", help="CLI name")
 
     p = sub.add_parser("discover", help="Auto-discover known CLI binaries")
-    p.add_argument("--scan-path", help="Extra directory to scan for executables")
+    p.add_argument("--scan-path", help="Extra directory to scan")
 
     p = sub.add_parser("remove", help="Remove from registry")
     p.add_argument("cli", help="CLI name")
@@ -369,16 +415,14 @@ def main():
     p.add_argument("cli", help="CLI name or binary")
 
     args = parser.parse_args()
-
-    cmds = {
+    {
         "register": cmd_register,
         "list": cmd_list,
         "lookup": cmd_lookup,
         "discover": cmd_discover,
         "remove": cmd_remove,
         "help": cmd_help_cli,
-    }
-    cmds[args.command](args)
+    }[args.command](args)
 
 
 if __name__ == "__main__":

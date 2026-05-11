@@ -1,11 +1,11 @@
 ---
 name: cli-hub
 description: >
-  Unified interface for ALL external CLI tools. Use when the user wants to run
-  or interact with ANY command-line tool (jq, fzf, gh, docker, mmx, mihomo,
-  opencli, etc.). This skill auto-discovers CLI capabilities from a registry or
-  live --help output. Triggers on: "run <tool>", "use <tool>",
-  "用 <tool> 命令", any mention of a known binary name.
+  Unified interface for ALL external CLI tools. Triggers when the user mentions
+  ANY CLI tool name (git, curl, gh, npm, docker, ffmpeg, jq, rg, fzf, awk, sed,
+  grep, find, ssh, mihomo, opencli etc.) OR wants to "run", "use", "execute"
+  a tool, OR asks "how to" use a CLI, OR says "用...命令", "帮我运行...".
+  Use this skill FIRST whenever a request might involve a command-line tool.
 ---
 
 # CLI Hub
