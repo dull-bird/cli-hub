@@ -2,6 +2,28 @@
 
 > One Skill to rule them all.
 
+```mermaid
+graph LR
+    CH["🔄 cli-hub<br/>One Skill<br/>All CLIs"] --> git["🐙 git<br/>Version Control"]
+    CH --> gh["🐱 gh<br/>GitHub CLI"]
+    CH --> opencli["🌐 opencli<br/>Browser to CLI"]
+    CH --> ffmpeg["🎬 ffmpeg<br/>Media Processing"]
+    CH --> python3["🐍 python3<br/>Scripting"]
+    CH --> docker["🐳 docker<br/>Containers"]
+    CH --> jq["📊 jq<br/>JSON Processor"]
+    CH --> more["...and 50+ more"]
+
+    style CH fill:#4f46e5,color:#fff,stroke:#312e81
+    style git fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style gh fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style opencli fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style ffmpeg fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style python3 fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style docker fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style jq fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style more fill:#fef3c7,stroke:#f59e0b,color:#92400e
+```
+
 An [OpenClaw AgentSkill](https://agentskills.io) that gives AI agents a unified interface to **any** CLI tool on your system — without writing a separate skill for each one.
 
 **The problem:** every CLI tool needs its own `SKILL.md` for an AI agent to know how to use it. 20 tools = 20 skills = maintenance nightmare.
@@ -27,6 +49,28 @@ User: "use jq to extract the name field"
      ├────────────────────┤
      │ 3. Live --help     │  Run <tool> --help on the fly
      └────────────────────┘
+```
+
+```mermaid
+graph LR
+    CH["🔄 cli-hub<br/>One Skill<br/>All CLIs"] --> git["🐙 git<br/>Version Control"]
+    CH --> gh["🐱 gh<br/>GitHub CLI"]
+    CH --> opencli["🌐 opencli<br/>Browser to CLI"]
+    CH --> ffmpeg["🎬 ffmpeg<br/>Media Processing"]
+    CH --> python3["🐍 python3<br/>Scripting"]
+    CH --> docker["🐳 docker<br/>Containers"]
+    CH --> jq["📊 jq<br/>JSON Processor"]
+    CH --> more["...and 50+ more"]
+
+    style CH fill:#4f46e5,color:#fff,stroke:#312e81
+    style git fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style gh fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style opencli fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style ffmpeg fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style python3 fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style docker fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style jq fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style more fill:#fef3c7,stroke:#f59e0b,color:#92400e
 ```
 
 ## Install

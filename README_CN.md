@@ -2,6 +2,28 @@
 
 > 一个 Skill 管所有 CLI。
 
+```mermaid
+graph LR
+    CH["🔄 cli-hub<br/>一个 Skill<br/>管理所有 CLI"] --> git["🐙 git<br/>版本控制"]
+    CH --> gh["🐱 gh<br/>GitHub CLI"]
+    CH --> opencli["🌐 opencli<br/>浏览器→命令行"]
+    CH --> ffmpeg["🎬 ffmpeg<br/>媒体处理"]
+    CH --> python3["🐍 python3<br/>脚本语言"]
+    CH --> docker["🐳 docker<br/>容器管理"]
+    CH --> jq["📊 jq<br/>JSON 处理"]
+    CH --> more["...以及 50+ 更多"]
+
+    style CH fill:#4f46e5,color:#fff,stroke:#312e81
+    style git fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style gh fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style opencli fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style ffmpeg fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style python3 fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style docker fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style jq fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style more fill:#fef3c7,stroke:#f59e0b,color:#92400e
+```
+
 一个 [OpenClaw AgentSkill](https://agentskills.io)，让 AI Agent 用统一接口操作**任何**系统里的 CLI 工具——不用再为每个工具手写 Skill。
 
 **痛点：** 每个 CLI 工具都要一个 `SKILL.md`，Agent 才会用。20 个工具 = 20 个 Skill = 维护噩梦。
