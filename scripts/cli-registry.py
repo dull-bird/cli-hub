@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""CLI Registry — unified management for external CLI tools.
+"""cli-hub — CLI Registry — unified management for external CLI tools.
 
 Reads/writes lightweight JSON registry entries in ~/.openclaw/cli-registry/.
-Powers the external-cli OpenClaw AgentSkill.
+Powers the cli-hub OpenClaw AgentSkill.
 
 Usage:
     python3 cli-registry.py register <name> [--binary <bin>] [--desc <text>]
@@ -340,7 +340,7 @@ def cmd_help_cli(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="CLI Registry for OpenClaw external-cli Skill",
+        description="CLI Registry for OpenClaw cli-hub Skill",
         prog="cli-registry")
     parser.add_argument("--version", action="version", version=VERSION)
 

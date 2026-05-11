@@ -1,30 +1,51 @@
 ---
-name: external-cli
+name: cli-hub
 description: >
   Unified interface for ALL external CLI tools. Use when the user wants to run
   or interact with ANY command-line tool (jq, fzf, gh, docker, mmx, mihomo,
-  opencli, etc.). This skill automatically discovers CLI capabilities from
-  a registry or live --help output. Triggers on: "run <tool>", "use <tool>",
+  opencli, etc.). This skill auto-discovers CLI capabilities from a registry or
+  live --help output. Triggers on: "run <tool>", "use <tool>",
   "用 <tool> 命令", any mention of a known binary name.
 ---
 
-# External CLI Hub
+# CLI Hub
 
-One skill to manage all CLI tools. Instead of N separate skills, this single
-entry handles ANY CLI tool through a priority-based discovery system.
+One skill to manage all CLI tools. Works across OpenClaw, Claude Code, Codex CLI,
+Cursor, and Aider.
+
+## Platform Detection
+
+At runtime, determine platform by checking which directories exist:
+
+| Platform     | Skill root                | Registry root                    |
+|-------------|---------------------------|----------------------------------|
+| OpenClaw     | `~/.agents/skills/`       | `~/.openclaw/cli-registry/`      |
+| Claude Code  | `~/.claude/skills/`       | `~/.claude/cli-registry/`        |
+| Codex CLI    | `~/.agents/skills/`       | `~/.codex/cli-registry/`         |
+| Cursor       | `~/.cursor/skills/`       | `~/.cursor/cli-registry/`        |
+
+Fallback: run `<tool> --help` directly if no registry path is available.
+
+See [references/platforms.md](references/platforms.md) for details.
 
 ## Priority Resolution
 
-When the user wants to use a CLI tool, resolve in this order:
+When the user wants to use a CLI tool:
 
-1. **Official Skill** — `~/.agents/skills/<tool>/SKILL.md` exists → use it (authoritative)
-2. **Registry** — `~/.openclaw/cli-registry/<tool>.json` → cached help + subcommands
+1. **Official Skill** — `$SKILLS_ROOT/<tool>/SKILL.md` exists → use it
+2. **Registry** — `$REGISTRY_ROOT/<tool>.json` → cached help + subcommands
 3. **Live Discovery** — run `<tool> --help` and parse on the fly
 
 ## Registry Script
 
 ```bash
-SCRIPT=~/.agents/skills/external-cli/scripts/cli-registry.py
+# Auto-detect platform; override with env vars:
+#   CLI_HUB_REGISTRY=~/.my-registry
+#   CLI_HUB_SKILLS=~/.my-skills
+
+SCRIPT=$(find ~/.agents/skills/cli-hub -name cli-registry.py 2>/dev/null || \
+         find ~/.claude/skills/cli-hub -name cli-registry.py 2>/dev/null || \
+         find ~/.cursor/skills/cli-hub -name cli-registry.py 2>/dev/null)
 ```
 
 ### Commands
@@ -38,10 +59,10 @@ SCRIPT=~/.agents/skills/external-cli/scripts/cli-registry.py
 | `python3 $SCRIPT remove <cli>` | Remove from registry |
 | `python3 $SCRIPT help <cli>` | Live `--help` dump (registered or not) |
 
-### Using a Tool (Decision Tree)
+### Decision Tree
 
 ```
-1. ls ~/.agents/skills/<tool>/SKILL.md
+1. ls $SKILLS_ROOT/<tool>/SKILL.md
    → EXISTS: read and follow that skill (it's authoritative)
    → NOT FOUND: continue
 
