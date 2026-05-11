@@ -1,4 +1,4 @@
-# external-cli
+# cli-hub
 
 > 一个 Skill 管所有 CLI。
 
@@ -15,7 +15,7 @@
               │
               ▼
      ┌─────────────────┐
-     │  external-cli    │  ← 只有一个 Skill
+     │  cli-hub    │  ← 只有一个 Skill
      └────────┬────────┘
               │
      ┌────────▼──────────┐
@@ -33,11 +33,11 @@
 
 ```bash
 # 通过 ClawHub（推荐）
-openclaw skills install external-cli
+openclaw skills install cli-hub
 
 # 或手动安装
-git clone https://github.com/dull-bird/external-cli.git
-cp -r external-cli ~/.agents/skills/external-cli
+git clone https://github.com/dull-bird/cli-hub.git
+cp -r cli-hub ~/.agents/skills/cli-hub
 ```
 
 ## 30 秒演示
