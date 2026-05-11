@@ -39,6 +39,37 @@ KNOWN_CLIS = [
     "systemctl", "journalctl", "ss", "ip", "ping", "dig",
 ]
 
+# Common shell/Unix utilities to skip during PATH scanning
+UNIX_BASICS = {
+    "[", "alias", "apt", "apt-get", "arch", "bash", "bg", "bind", "builtin",
+    "bunzip2", "bzcat", "bzip2", "cal", "case", "cat", "cd", "chgrp",
+    "chmod", "chown", "clear", "cmp", "comm", "command", "compgen", "cp",
+    "cpio", "csplit", "cut", "dash", "date", "dd", "declare", "df", "diff",
+    "dir", "dircolors", "dirname", "dirs", "dmidecode", "dmesg", "done",
+    "dpkg", "du", "echo", "ed", "egrep", "elif", "else", "enable", "env",
+    "eval", "exec", "exit", "expand", "export", "expr", "factor", "false",
+    "fc", "fg", "fgrep", "fi", "file", "findmnt", "fmt", "fold", "for",
+    "free", "function", "getopt", "getopts", "groups", "gunzip", "gzip",
+    "hash", "head", "history", "hostid", "hostname", "id", "if", "info",
+    "install", "jobs", "join", "kill", "ld", "ldd", "less", "let", "link",
+    "ln", "local", "locale", "logger", "login", "logname", "logout", "lp",
+    "ls", "lscpu", "lsblk", "lsof", "man", "mapfile", "md5sum", "mkdir",
+    "mkfifo", "mknod", "mktemp", "more", "mount", "mpstat", "mv", "namei",
+    "newgrp", "nice", "nl", "nohup", "nproc", "od", "paste", "pip", "pip3",
+    "popd", "pr", "printenv", "printf", "ps", "pushd", "pwd", "python",
+    "read", "readarray", "readlink", "realpath", "rename", "renice", "rev",
+    "rm", "rmdir", "run-parts", "sdiff", "select", "seq", "set", "sh",
+    "sha1sum", "sha256sum", "shift", "shopt", "shred", "shuf", "sleep",
+    "sort", "source", "split", "stat", "stdbuf", "strings", "strip", "stty",
+    "su", "sudo", "sum", "suspend", "sync", "tac", "tail", "tee", "test",
+    "time", "timeout", "times", "touch", "tput", "tr", "trap", "true",
+    "truncate", "tset", "tsort", "tty", "type", "typeset", "ulimit",
+    "umask", "umount", "unalias", "uname", "unexpand", "uniq", "unlink",
+    "unset", "until", "updatedb", "uptime", "users", "vi", "vim", "wait",
+    "wall", "watch", "w", "whatis", "whereis", "which", "while", "who",
+    "whoami", "write", "xdg-open", "yes", "zcat", "zless", "zmore",
+}
+
 
 # ── helpers ────────────────────────────────────────────────────
 
@@ -332,6 +363,8 @@ def cmd_lookup(args):
 
 def cmd_discover(args):
     count = 0
+
+    # Phase 1: known list
     for binary in KNOWN_CLIS:
         if (REGISTRY_DIR / "{}.json".format(binary)).is_file():
             continue
@@ -344,6 +377,38 @@ def cmd_discover(args):
             except Exception as exc:
                 print("failed ({})".format(exc))
 
+    # Phase 2: deep PATH scan
+    if args.scan:
+        print("\nScanning PATH for additional binaries...")
+        seen = set(KNOWN_CLIS) | {
+            e.stem for e in REGISTRY_DIR.glob("*.json")
+        }
+        for path_dir in os.environ.get("PATH", "").split(os.pathsep):
+            d = Path(path_dir)
+            if not d.is_dir():
+                continue
+            try:
+                for entry in d.iterdir():
+                    name = entry.name
+                    if name in seen or name in UNIX_BASICS:
+                        continue
+                    if len(name) < 2 or len(name) > 30:
+                        continue
+                    if not re.match(r'^[a-z][a-z0-9._-]+$', name):
+                        continue
+                    if entry.is_file() and os.access(str(entry), os.X_OK):
+                        seen.add(name)
+                        print("Found: {} ...".format(name), end=" ", flush=True)
+                        try:
+                            cmd_register(argparse.Namespace(
+                                cli=name, binary=str(entry), desc="", force=False))
+                            count += 1
+                        except Exception as exc:
+                            print("failed ({})".format(exc))
+            except PermissionError:
+                continue
+
+    # Phase 3: custom directory
     if args.scan_path:
         sp = Path(args.scan_path)
         if sp.is_dir():
@@ -405,8 +470,10 @@ def main():
     p = sub.add_parser("lookup", help="Look up a CLI")
     p.add_argument("cli", help="CLI name")
 
-    p = sub.add_parser("discover", help="Auto-discover known CLI binaries")
-    p.add_argument("--scan-path", help="Extra directory to scan")
+    p = sub.add_parser("discover", help="Auto-discover CLI binaries")
+    p.add_argument("--scan", action="store_true",
+                   help="Deep scan all PATH directories (slower, finds more)")
+    p.add_argument("--scan-path", help="Extra directory to scan for executables")
 
     p = sub.add_parser("remove", help="Remove from registry")
     p.add_argument("cli", help="CLI name")
