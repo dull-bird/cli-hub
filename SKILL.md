@@ -1,17 +1,28 @@
 ---
 name: cli-hub
 description: >
-  Unified interface for ALL external CLI tools. Triggers when the user mentions
-  ANY CLI tool name (git, curl, gh, npm, docker, ffmpeg, jq, rg, fzf, awk, sed,
-  grep, find, ssh, mihomo, opencli etc.) OR wants to "run", "use", "execute"
-  a tool, OR asks "how to" use a CLI, OR says "用...命令", "帮我运行...".
-  Use this skill FIRST whenever a request might involve a command-line tool.
+  Universal CLI discovery gateway. Use this skill FIRST whenever the user appears
+  to be running, asking about, or interacting with ANY command-line tool.
+  Trigger patterns: "run <cmd>", "execute <cmd>", "用 <cmd>",
+  "帮我 <run/look/check/do>", "怎么用 <tool>", any backtick-wrapped
+  command, any line that looks like a shell command with flags/arguments.
+  When triggered, resolve the tool via: official skill → registry → --help.
 ---
 
 # CLI Hub
 
 One skill to manage all CLI tools. Works across OpenClaw, Claude Code, Codex CLI,
 Cursor, and Aider.
+
+## Trigger Check (read FIRST)
+
+This skill triggers broadly — any mention of a CLI. To avoid overloading the
+context window, do a quick sanity check before proceeding:
+
+- Is the user asking something purely conversational? ("你好", "今天天气", ...) → skip
+- Is another official skill already handling this? → defer to it
+- Does the request involve running a tool, looking up a command, or understanding
+  CLI output? → proceed
 
 ## Platform Detection
 
