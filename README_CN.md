@@ -24,11 +24,11 @@ graph LR
     style more fill:#fef3c7,stroke:#f59e0b,color:#92400e
 ```
 
-一个 [OpenClaw AgentSkill](https://agentskills.io)，让 AI Agent 用统一接口操作**任何**系统里的 CLI 工具——不用再为每个工具手写 Skill。
+一个 [OpenClaw AgentSkill](https://agentskills.io)，让 AI Agent 用统一接口操作**任何**系统里的 CLI 工具。
 
-**痛点：** 每个 CLI 工具都要一个 `SKILL.md`，Agent 才会用。20 个工具 = 20 个 Skill = 维护噩梦。
+**对你来说：** 装好这个 Skill，然后像平时一样跟 Agent 说话。"帮我看看 open 的 PR""压缩这个视频""查一下 JSON 里某个字段"——Agent 自己会找工具、学用法。
 
-**方案：** 一个 Skill + 轻量注册表。Agent 按优先级查询：**官方 Skill → 注册表 → 实时 `--help`**。官方 Skill 永远优先，其他全部自动发现。
+**对 Agent 来说：** 一个 Skill + 轻量注册表，不用为每个工具写单独的 SKILL.md。查询顺序：**官方 Skill → 注册表缓存 → 现场 `--help`**。官方 Skill 永远优先，没注册的工具首次提到就自动发现。
 
 ## 工作原理
 
@@ -62,101 +62,39 @@ git clone https://github.com/dull-bird/cli-hub.git
 cp -r cli-hub ~/.agents/skills/cli-hub
 ```
 
-## 30 秒演示
+## 实际效果
 
-```bash
-# 1. 一键发现系统里所有 CLI 工具
-$ python3 cli-registry.py discover
-
-Found: jq ...    Registered: jq (15 subcommands, 8 flags)
-Found: fzf ...   Registered: fzf (3 subcommands, 6 flags)
-Found: gh ...    Registered: gh (25 subcommands, 0 flags)
-Found: rg ...    Registered: rg (10 subcommands, 8 flags)
-Found: mihomo ...Registered: mihomo (official skill: takes priority)
-Found: opencli ..Registered: opencli (official skill: takes priority)
-...
-
-Registered 13 new CLI tools.
-
-# 2. 查看注册了哪些工具
-$ python3 cli-registry.py list
-
-NAME          BINARY       OFFICIAL  SUBS  DESCRIPTION
-─────────────────────────────────────────────────────────
-curl          curl         -           0   External CLI: curl
-gh            gh           -          25   External CLI: gh
-git           git          -          19   Distributed version control
-jq            jq           -          15   External CLI: jq
-mihomo        mihomo       yes         0   External CLI: mihomo
-opencli       opencli      yes         0   External CLI: opencli
-...
-
-# 3. 查看某个工具（子命令、参数、help）
-$ python3 cli-registry.py lookup gh
-
-# CLI: gh
-Binary: gh
-
-## Subcommands (25)
-  auth              Authenticate gh with GitHub
-  browse            Open the repository in the browser
-  codespace         Connect to and manage codespaces
-  gist              Manage gists
-  issue             Manage issues
-  pr                Manage pull requests
-  release           Manage releases
-  repo              Manage repositories
-...
-```
-
-## Agent 实际交互演示
+你什么都不用敲，Agent 干活：
 
 ```
- 👤 User:    "用 jq 把 data.json 里的所有 name 字段提取出来"
-            ─────────────────────────────────────────────
- 🤖 Agent:  [检查: ~/.agents/skills/jq/SKILL.md → 不存在]
-            [查注册表: jq.json → 找到, 15 个子命令]
-            [执行: jq '.[].name' data.json]
-            ─────────────────────────────────────────────
-            ["Alice", "Bob", "Charlie"]
+ 👤 用户:     "用 jq 把 todos.json 里 completed=false 的筛选出来统计数量"
+             ─────────────────────────────────────────────
+ 🤖 Agent:   [cli-hub: 查官方 Skill → 无 jq 专属 Skill]
+             [cli-hub: 查注册表 → 暂无 jq 缓存]
+             [cli-hub: 跑 jq --help → 现场学习语法]
+             [执行: jq '[.[] | select(.completed==false)] | length' todos.json]
+             ─────────────────────────────────────────────
+             3
 
- 👤 User:    "用 gh 看看我 open 的 PR"
-            ─────────────────────────────────────────────
- 🤖 Agent:  [检查: ~/.agents/skills/gh/SKILL.md → 不存在]
-            [查注册表: gh.json → 找到, 有 'pr' 子命令]
-            [执行: gh pr list --state open]
-            ─────────────────────────────────────────────
-            #1 Add login page   about 2 hours ago
-            #3 Fix navbar       about 1 day ago
+ 👤 用户:     "帮我看看 docker 都在跑什么容器"
+             ─────────────────────────────────────────────
+ 🤖 Agent:   [cli-hub: 查官方 Skill → 无 docker 专属 Skill]
+             [cli-hub: 查注册表 → 找到, 36 个子命令]
+             [执行: docker ps]
+             ─────────────────────────────────────────────
+             CONTAINER ID  IMAGE         STATUS        NAMES
+             a1b2c3d4e5f6  nginx:latest  Up 2 hours    web
 
- 👤 User:    "切到日本节点"
-            ─────────────────────────────────────────────
- 🤖 Agent:  [检查: mihomo/SKILL.md → 存在!]
-            [官方 Skill 优先]
-            [执行: mihomo start; mihomo switch-node "日本 1 | SS | ZJ"]
+ 👤 用户:     "切到日本节点"
+             ─────────────────────────────────────────────
+ 🤖 Agent:   [cli-hub: 查官方 Skill → mihomo/SKILL.md 存在!]
+             [交给官方 Skill → 它最懂]
+             [执行: mihomo switch-node "日本 1 | SS | ZJ"]
+             ─────────────────────────────────────────────
+             ✓ 已切换到 日本 1 | SS | ZJ
 ```
 
-## 优先级在行动
-
-```
-用户: "切到日本节点"
-        │
-        ├─ mihomo/SKILL.md  存在 → ✅ 直接用
-        │  (手写的 Skill，知道 start/stop/sub/specific scripts)
-        │
-用户: "gh pr list"
-        │
-        ├─ gh/SKILL.md  不存在 → 跳过
-        │  └─ registry/gh.json  存在 → ✅ 用注册表
-        │     (缓存了 25 个 --help 子命令)
-        │
-用户: "xsv select name data.csv"
-        │
-        ├─ xsv/SKILL.md  不存在 → 跳过
-        │  └─ registry/xsv.json  不存在 → 跳过
-        │     └─ xsv --help  → ✅ 现场学习
-        │        (解析输出，构造命令，顺手注册)
-```
+不需要 `discover`，不需要 `register`，不需要 `list`。Agent 自己搞定发现、缓存、工具匹配。如果你追求极致速度，可以在环境初始化脚本里加一行 `cli-registry.py discover` 预热——但完全不必要。
 
 ## 注册表格式
 
@@ -202,9 +140,9 @@ Binary: gh
 - **爆炸：** 20 个 CLI = 20 个 Skill 文件，维护成本太高
 - **过时：** 工具更新后 Skill 滞后 → `--help` 永远是最新的
 - **官方优先：** CLI 作者可能推出更好的官方 Skill → 优先级机制自动适配
-- **零门槛：** 装完跑一次 `discover`，所有工具当场可用
+- **即时可用：** 跟 Agent 说话就行。不用配置，不用 discover，不用任何命令。工具在 PATH 里，Agent 就会用。
 
-可以理解为 `opencli external register` 的 AI Agent 版本。
+可以理解为教 Agent 现场读 `--help`——所以你永远不需要手动维护工具列表。
 
 ## 相关链接
 

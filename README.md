@@ -24,11 +24,11 @@ graph LR
     style more fill:#fef3c7,stroke:#f59e0b,color:#92400e
 ```
 
-An [OpenClaw AgentSkill](https://agentskills.io) that gives AI agents a unified interface to **any** CLI tool on your system — without writing a separate skill for each one.
+An [OpenClaw AgentSkill](https://agentskills.io) that gives AI agents a unified interface to **any** CLI tool on your system.
 
-**The problem:** every CLI tool needs its own `SKILL.md` for an AI agent to know how to use it. 20 tools = 20 skills = maintenance nightmare.
+**For you, the human:** install this skill, then talk to your agent like you normally would. "Show my open PRs", "compress this video", "query that JSON" — the agent figures out the tool on its own.
 
-**The solution:** one skill + a lightweight registry. The agent checks: **official skill → registry → live `--help`**. Tools with official skills take priority. Everything else is auto-discovered.
+**For the agent:** one skill + a lightweight registry, no duplicate SKILL.md files. Resolution order: **official skill → registry cache → live `--help`**. Official skills take priority; unregistered tools are discovered on first mention.
 
 ## How It Works
 
@@ -62,104 +62,41 @@ git clone https://github.com/dull-bird/cli-hub.git
 cp -r cli-hub ~/.agents/skills/cli-hub
 ```
 
-## 30-Second Demo
+## What It Looks Like
 
-```bash
-# 1. Auto-discover everything on your system
-$ python3 cli-registry.py discover
-
-Found: jq ...    Registered: jq (15 subcommands, 8 flags)
-Found: fzf ...   Registered: fzf (3 subcommands, 6 flags)
-Found: gh ...    Registered: gh (25 subcommands, 0 flags)
-Found: rg ...    Registered: rg (10 subcommands, 8 flags)
-Found: mihomo ...Registered: mihomo (official skill: takes priority)
-Found: opencli ..Registered: opencli (official skill: takes priority)
-...
-
-Registered 13 new CLI tools.
-
-# 2. List what's available
-$ python3 cli-registry.py list
-
-NAME          BINARY       OFFICIAL  SUBS  DESCRIPTION
-─────────────────────────────────────────────────────────
-curl          curl         -           0   External CLI: curl
-gh            gh           -          25   External CLI: gh
-git           git          -          19   Distributed version control
-jq            jq           -          15   External CLI: jq
-mihomo        mihomo       yes         0   External CLI: mihomo
-opencli       opencli      yes         0   External CLI: opencli
-...
-
-# 3. Look up a tool
-$ python3 cli-registry.py lookup gh
-
-# CLI: gh
-Binary: gh
-Description: External CLI: gh
-
-## Subcommands (25)
-  auth              Authenticate gh with GitHub
-  browse            Open the repository in the browser
-  codespace         Connect to and manage codespaces
-  gist              Manage gists
-  issue             Manage issues
-  pr                Manage pull requests
-  release           Manage releases
-  repo              Manage repositories
-  run               View recent workflow runs
-  secret            Manage secrets
-...
-```
-
-## Agent Interaction Demo
+You don't run `discover` commands — your agent does the work. Just talk:
 
 ```
- 👤 User:    "extract all name fields from data.json using jq"
+ 👤 User:    "count how many todos with completed=false are in todos.json using jq"
             ─────────────────────────────────────────────
- 🤖 Agent:  [checks: ~/.agents/skills/jq/SKILL.md → not found]
-            [lookup: registry/jq.json → found, 15 commands]
-            [runs: jq '.[].name' data.json]
+ 🤖 Agent:  [cli-hub: checks official skills → no jq skill]
+            [cli-hub: checks registry → no cache for jq]
+            [cli-hub: runs jq --help → learns syntax on the fly]
+            [executes: jq '[.[] | select(.completed==false)] | length' todos.json]
             ─────────────────────────────────────────────
-            ["Alice", "Bob", "Charlie"]
+            3
 
- 👤 User:    "show me my open PRs with gh"
+ 👤 User:    "show me what containers docker is running"
             ─────────────────────────────────────────────
- 🤖 Agent:  [checks: ~/.agents/skills/gh/SKILL.md → not found]
-            [lookup: registry/gh.json → found, has 'pr' subcommand]
-            [runs: gh pr list --state open]
+ 🤖 Agent:  [cli-hub: checks official skills → no docker skill]
+            [cli-hub: checks registry → found, 36 subcommands]
+            [executes: docker ps]
             ─────────────────────────────────────────────
-            #1 Add login page   about 2 hours ago
-            #3 Fix navbar       about 1 day ago
+            CONTAINER ID  IMAGE         STATUS        NAMES
+            a1b2c3d4e5f6  nginx:latest  Up 2 hours    web
 
- 👤 User:    "switch to the Japan node"
+ 👤 User:    "switch to the Japan proxy node"
             ─────────────────────────────────────────────
- 🤖 Agent:  [checks: ~/.agents/skills/mihomo/SKILL.md → FOUND]
-            [official skill takes priority]
-            [uses: mihomo start; mihomo switch-node "Japan 1 | SS | ZJ"]
+ 🤖 Agent:  [cli-hub: checks official skills → mihomo/SKILL.md FOUND]
+            [defers to official skill — it knows best]
+            [executes: mihomo switch-node "Japan 1 | SS | ZJ"]
+            ─────────────────────────────────────────────
+            ✓ Switched to Japan 1 | SS | ZJ
 ```
 
-## Priority in Action
-
-```
-User: "switch to the Japan node"
-        │
-        ├─ mihomo/SKILL.md  EXISTS → ✅ use it
-        │  (handwritten, knows start/stop/sub/specific scripts)
-        │
-User: "gh pr list"
-        │
-        ├─ gh/SKILL.md  NOT EXISTS → skip
-        │  └─ registry/gh.json  EXISTS → ✅ use it
-        │     (cached 25 subcommands from --help)
-        │
-User: "xsv select name data.csv"
-        │
-        ├─ xsv/SKILL.md  NOT EXISTS → skip
-        │  └─ registry/xsv.json  NOT EXISTS → skip
-        │     └─ xsv --help  → ✅ live discovery
-        │        (parse output, construct command, optionally register)
-```
+No `discover`, no `register`, no `list`. The agent handles discovery, caching,
+and tool resolution automatically. If you *want* to pre-warm the registry for
+speed, add `cli-registry.py discover` to your setup script — but it's optional.
 
 ## Registry Format
 
@@ -206,9 +143,9 @@ No YAML frontmatter. No markdown. Just structured data. Lightweight enough for h
 - **Explosion:** 20 CLI tools = 20 skills = 20 files to maintain
 - **Staleness:** Tools update, skills lag behind → `--help` is always current
 - **Official skills:** CLI authors may publish better skills → priority system respects them
-- **Onboarding:** Run `discover` once, all tools available immediately
+- **Instant:** talk to your agent. No setup, no commands, no discover step. If a tool is on your PATH, your agent knows how to use it.
 
-Think of this as `opencli external register` but for AI agents instead of humans.
+Think of this as teaching your agent to read `--help` on demand — so you never have to.
 
 ## Related
 
