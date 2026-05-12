@@ -555,26 +555,57 @@ def _clean_help_raw(text):
     return result[:5000]
 
 
+def _format_commands_text(parsed_subs):
+    """Build a compact command summary for LLM consumption."""
+    if not parsed_subs:
+        return ""
+    lines = []
+    for s in parsed_subs[:20]:
+        name = s["name"]
+        desc = s.get("desc", "")
+        if desc:
+            lines.append("{} — {}".format(name, desc))
+        else:
+            lines.append(name)
+    return "\n".join(lines)
+
+
+def _format_options_text(options):
+    """Build a compact options summary for LLM consumption."""
+    if not options:
+        return ""
+    lines = []
+    for o in options[:15]:
+        flag = o["flag"]
+        aliases = ", ".join(o.get("aliases", []))
+        label = "{} ({})".format(flag, aliases) if aliases else flag
+        value = " <{}>".format(o["value"]) if o.get("value") else ""
+        desc = o.get("desc", "")
+        lines.append("{}{} — {}".format(label, value, desc))
+    return "\n".join(lines)
+
+
 def _extract_help(binary):
     """Extract structured help: usage, subcommands with options, global options."""
     text = _fetch_help_text(binary)
     if not text:
         return {"binary": binary, "help_raw": "{} — help unavailable".format(binary)}
 
+    parsed_subs = _parse_subcommands(text)
+    parsed_opts = _parse_options(text)
+
     result = {
         "binary": binary,
         "help_raw": _clean_help_raw(text),
-        "help_short": text[:2000],
         "usage": _extract_usage(text),
         "summary": _extract_summary(text),
+        "commands_text": _format_commands_text(parsed_subs),
+        "options_text": _format_options_text(parsed_opts),
         "subcommands": {},
         "global_options": [],
     }
 
-    subs = _parse_subcommands(text)
-    top_subs = subs[:12]
-
-    result["global_options"] = _parse_options(text)
+    top_subs = parsed_subs[:12]
 
     for s in top_subs:
         name = s["name"]
