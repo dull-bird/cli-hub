@@ -468,6 +468,27 @@ def _fetch_help_text(binary, subcommand=None):
     return output if output else ""
 
 
+def _fetch_version(binary):
+    """Extract version from --version output.
+
+    Handles: "git version 2.17.1", "gh version 2.92.0",
+    "curl 7.58.0", "v22.14.0", "Python 3.6.9", "mihomo-cli v2.8.1"
+    """
+    try:
+        code, out, err = _run([binary, "--version"], timeout=5)
+        output = (out + err).strip()
+        if not output:
+            code, out, err = _run([binary, "-V"], timeout=5)
+            output = (out + err).strip()
+        if output:
+            m = re.search(r'\d+\.\d+(?:\.\d+)?(?:[a-z]\d*)?', output)
+            if m:
+                return m.group(0)
+    except Exception:
+        pass
+    return None
+
+
 # ── P1: Smart summary extraction ────────────────────────────────
 
 def _extract_summary(text):
@@ -596,6 +617,7 @@ def _extract_help(binary):
 
     result = {
         "binary": binary,
+        "version": _fetch_version(binary),
         "help_raw": _clean_help_raw(text),
         "usage": _extract_usage(text),
         "summary": _extract_summary(text),
@@ -865,7 +887,9 @@ def cmd_lookup(args):
     print("Binary: {}".format(d.get("binary")))
     if d.get("description"):
         print("Description: {}".format(d["description"]))
-    if d.get("official_skill"):
+    ad = d.get("auto_discovered", {})
+    if ad.get("version"):
+        print("Registered version: {}".format(ad["version"]))
         print("Official Skill: {} (takes priority)".format(d["official_skill"]))
     keywords = d.get("keywords", [])
     if keywords:
@@ -1075,6 +1099,50 @@ def cmd_help_cli(args):
         print("No help output from {}".format(binary))
 
 
+def cmd_check_stale(args):
+    """Check for tools whose installed version differs from registry."""
+    entries = [e for e in sorted(REGISTRY_DIR.glob("*.json")) if not e.name.startswith(".")]
+    if not entries:
+        print("No tools registered.")
+        return
+
+    stale = []
+    current = 0
+    for e in entries:
+        try:
+            d = json.loads(e.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        name = d.get("name")
+        binary = d.get("binary", name)
+        ad = d.get("auto_discovered", {})
+        registered_ver = ad.get("version")
+        installed_ver = _fetch_version(binary)
+
+        if installed_ver is None:
+            continue
+
+        current += 1
+        if registered_ver and installed_ver != registered_ver:
+            stale.append((name, registered_ver, installed_ver))
+
+    print("{} tools with version info".format(current))
+    if stale:
+        print("{} stale (installed ≠ registered):\n".format(len(stale)))
+        for name, old, new in stale:
+            print("  {}: {} → {}".format(name, old, new))
+        if args.update:
+            print("\nRe-registering stale tools...")
+            for name, old, new in stale:
+                cmd_register(argparse.Namespace(
+                    cli=name, binary=name, desc="", force=True))
+            _save_keyword_index()
+            print("Done.")
+        else:
+            print("\nDry run. Use --update to re-register.")
+    else:
+        print("All up to date.")
+
 def main():
     parser = argparse.ArgumentParser(
         description="CLI Registry for cli-hub AgentSkill",
@@ -1105,6 +1173,10 @@ def main():
                    help="Deep scan all PATH directories (slower, finds more)")
     p.add_argument("--scan-path", help="Extra directory to scan for executables")
 
+    p = sub.add_parser("check-stale", help="Check for tools with updated versions")
+    p.add_argument("--update", action="store_true",
+                   help="Re-register tools whose version changed")
+
     p = sub.add_parser("remove", help="Remove from registry")
     p.add_argument("cli", help="CLI name")
 
@@ -1120,6 +1192,7 @@ def main():
         "discover": cmd_discover,
         "remove": cmd_remove,
         "help": cmd_help_cli,
+        "check-stale": cmd_check_stale,
     }[args.command](args)
 
 
