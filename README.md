@@ -44,7 +44,19 @@ Works on 55+ agents: OpenClaw, Claude Code, Cursor, Gemini CLI, Copilot, Windsur
 
 ## Use
 
-You talk. The agent figures out which tool to use.
+After installing, warm up the registry once:
+
+```bash
+python3 ~/.claude/skills/cli-hub/scripts/cli-registry.py discover
+
+# Or for OpenClaw:
+python3 ~/.agents/skills/cli-hub/scripts/cli-registry.py discover
+
+# Register any extra tools you use:
+python3 ~/.claude/skills/cli-hub/scripts/cli-registry.py register my-tool
+```
+
+Then just talk to your agent normally:
 
 ```
  👤  "how many uncompleted todos are in data.json?"
@@ -66,9 +78,9 @@ You talk. The agent figures out which tool to use.
      ✓ Switched to Japan 1 | SS | ZJ
 ```
 
-No config needed. The first time you mention a tool, the agent learns it via `--help` and caches it.
+Discover is recommended once after install. Without it, tools are still learned on first mention — just slightly slower.
 
-> **Optional:** run `discover` once to pre-scan your PATH and pre-warm the cache. Without it, tools are still learned on first mention — just slightly slower the first time.
+> 💡 **Tip:** if you use niche or recently-installed tools, `register` them. This gives the agent their subcommands, flags, and version info immediately, instead of discovering them on the fly.
 
 ---
 

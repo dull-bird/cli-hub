@@ -44,7 +44,19 @@ npx skills add dull-bird/cli-hub
 
 ## 使用
 
-你说话，Agent 自己找工具。
+安装后，预热一下注册表：
+
+```bash
+python3 ~/.claude/skills/cli-hub/scripts/cli-registry.py discover
+
+# 或者 OpenClaw：
+python3 ~/.agents/skills/cli-hub/scripts/cli-registry.py discover
+
+# 你常用的工具可以手动注册，Agent 立即获得完整信息：
+python3 ~/.claude/skills/cli-hub/scripts/cli-registry.py register my-tool
+```
+
+然后正常说话就行：
 
 ```
  👤  "统计 data.json 里还有几个没完成的待办"
@@ -66,9 +78,9 @@ npx skills add dull-bird/cli-hub
      ✓ 已切换到 日本 1 | SS | ZJ
 ```
 
-不需要配置。第一次用到某个工具时，Agent 当场通过 `--help` 学会并缓存。
+建议安装后跑一次 `discover`。不跑也能用——工具会在首次使用时自动学习，只是稍慢。
 
-> **可选：** 跑一次 `discover` 预先扫描 PATH 并预热缓存。不跑也能用——只是首次使用时稍慢一点。
+> 💡 **提示：** 如果你有小众工具或刚安装的工具，用 `register` 注册一下。Agent 立刻就能拿到子命令、参数和版本信息，不用现场摸索。
 
 ---
 
