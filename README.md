@@ -51,28 +51,6 @@ User: "use jq to extract the name field"
      └────────────────────┘
 ```
 
-```mermaid
-graph LR
-    CH["🔄 cli-hub<br/>One Skill<br/>All CLIs"] --> git["🐙 git<br/>Version Control"]
-    CH --> gh["🐱 gh<br/>GitHub CLI"]
-    CH --> opencli["🌐 opencli<br/>Browser to CLI"]
-    CH --> ffmpeg["🎬 ffmpeg<br/>Media Processing"]
-    CH --> python3["🐍 python3<br/>Scripting"]
-    CH --> docker["🐳 docker<br/>Containers"]
-    CH --> jq["📊 jq<br/>JSON Processor"]
-    CH --> more["...and 50+ more"]
-
-    style CH fill:#4f46e5,color:#fff,stroke:#312e81
-    style git fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style gh fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style opencli fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style ffmpeg fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style python3 fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style docker fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style jq fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style more fill:#fef3c7,stroke:#f59e0b,color:#92400e
-```
-
 ## Install
 
 ```bash
@@ -137,7 +115,7 @@ Description: External CLI: gh
 ## Agent Interaction Demo
 
 ```
- 👤 User:    "用 jq 把 data.json 里的所有 name 字段提取出来"
+ 👤 User:    "extract all name fields from data.json using jq"
             ─────────────────────────────────────────────
  🤖 Agent:  [checks: ~/.agents/skills/jq/SKILL.md → not found]
             [lookup: registry/jq.json → found, 15 commands]
@@ -145,7 +123,7 @@ Description: External CLI: gh
             ─────────────────────────────────────────────
             ["Alice", "Bob", "Charlie"]
 
- 👤 User:    "用 gh 看看我 open 的 PR"
+ 👤 User:    "show me my open PRs with gh"
             ─────────────────────────────────────────────
  🤖 Agent:  [checks: ~/.agents/skills/gh/SKILL.md → not found]
             [lookup: registry/gh.json → found, has 'pr' subcommand]
@@ -154,17 +132,17 @@ Description: External CLI: gh
             #1 Add login page   about 2 hours ago
             #3 Fix navbar       about 1 day ago
 
- 👤 User:    "切到日本节点"
+ 👤 User:    "switch to the Japan node"
             ─────────────────────────────────────────────
  🤖 Agent:  [checks: ~/.agents/skills/mihomo/SKILL.md → FOUND]
             [official skill takes priority]
-            [uses: mihomo start; mihomo switch-node "日本 1 | SS | ZJ"]
+            [uses: mihomo start; mihomo switch-node "Japan 1 | SS | ZJ"]
 ```
 
 ## Priority in Action
 
 ```
-User: "切到日本节点"
+User: "switch to the Japan node"
         │
         ├─ mihomo/SKILL.md  EXISTS → ✅ use it
         │  (handwritten, knows start/stop/sub/specific scripts)
