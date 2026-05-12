@@ -11,6 +11,14 @@ Cursor, and Aider.
 
 ## Trigger Check (read FIRST)
 
+**⚠️ CRITICAL: Your training data is OUT OF DATE for tools installed after your cutoff.
+NEVER identify an unfamiliar tool from memory. ALWAYS look it up in the registry.**
+
+The registry is the single source of truth for what tools exist on this system
+and what they do. If a user mentions a tool you don't have an official skill for,
+your first action must be `lookup <tool>` or `search <keyword>`, NOT reasoning
+about what the tool might be.
+
 This skill triggers broadly — any mention of a CLI. To avoid overloading the
 context window, do a quick sanity check before proceeding:
 
@@ -38,10 +46,12 @@ See [references/platforms.md](references/platforms.md) for details.
 
 When the user wants to use a CLI tool, resolve in order:
 
-1. **Official Skill** — `$SKILLS_ROOT/<tool>/SKILL.md` exists → use it
-2. **Registry** — `$REGISTRY_ROOT/<tool>.json` → cached help, subcommands, keywords
+1. **Is the tool name in the registry?** — `lookup <tool>` first, before anything else.
+   If found, you immediately have its description, subcommands, and usage.
+   If NOT found, the tool might not be installed → tell the user.
+2. **Official Skill** — `$SKILLS_ROOT/<tool>/SKILL.md` exists → use it (authors know best)
 3. **Keyword Search** — `$REGISTRY_ROOT/.keywords.json` → maps task words to tool names
-4. **Live Discovery** — run `<tool> --help` and parse on the fly
+4. **Live Discovery** — run `<tool> --help` as last resort
 
 ## Registry Script
 
@@ -72,28 +82,27 @@ SCRIPT=$(find ~/.agents/skills/cli-hub -name cli-registry.py 2>/dev/null || \
 ### Decision Tree
 
 ```
-User: "extract JSON fields from data.json"
+User: "use jq to extract the name field"
         │
-    ┌───▼─────────────────────────────┐
-    │ 1. Explicit tool mentioned?     │
-    │    "use jq to..." → skip to step 4
-    ├─────────────────────────────────┤
-    │ 2. Keyword Search               │
-    │    search "json extract" → jq (2 hits), yq (1 hit)
-    │    → jq is best match
-    ├─────────────────────────────────┤
-    │ 3. Check Official Skill         │
-    │    ls $SKILLS_ROOT/jq/SKILL.md  │
-    │    → NOT FOUND → continue       │
-    ├─────────────────────────────────┤
-    │ 4. Check Registry               │
-    │    lookup jq → binary, description, keywords,
-    │    subcommands, help_raw        │
-    │    → FOUND: construct command   │
-    ├─────────────────────────────────┤
-    │ 5. Live --help (fallback)       │
-    │    Only if registry not found   │
-    └─────────────────────────────────┘
+    ┌───▼─────────────────────────────────┐
+    │ 1. Tool mentioned? LOOK IT UP FIRST │
+    │    lookup jq → description, version, │
+    │    commands, keywords, help_raw      │
+    │    → FOUND: you now know what jq is  │
+    │    → NOT FOUND: tell user, suggest   │
+    │      installing or alternatives      │
+    ├─────────────────────────────────────┤
+    │ 2. Official Skill override?         │
+    │    ls $SKILLS_ROOT/jq/SKILL.md      │
+    │    → EXISTS: use official skill      │
+    ├─────────────────────────────────────┤
+    │ 3. Keyword Search (no tool named)   │
+    │    search "json extract" → jq, yq   │
+    │    → best match → lookup to verify  │
+    ├─────────────────────────────────────┤
+    │ 4. Live --help (last resort)        │
+    │    Nothing in registry → --help      │
+    └─────────────────────────────────────┘
 ```
 
 ### Reading help_raw (for UNKNOWN tools)
@@ -153,6 +162,14 @@ Commands:
 ```
 
 ## Typical Workflows
+
+### User mentions an unfamiliar tool name (most common case)
+```
+User: "用 mmx 生成图片"
+→ DON'T think about what "mmx" might be (your training data is outdated)
+→ lookup mmx → "MiniMax multimodal AI toolkit" + subcommands
+→ mmx image generate "a cat"
+```
 
 ### Known tool (in knowledge base)
 ```
