@@ -53,13 +53,20 @@ User: "use jq to extract the name field"
 
 ## Install
 
+Works with **OpenClaw, Claude Code, Codex CLI, Cursor, Aider** — auto-detects platform at runtime.
+
 ```bash
-# Via ClawHub (recommended)
+# ClawHub (all platforms)
+npx clawhub install cli-hub
+
+# Or with global ClawHub CLI
+npm i -g clawhub && clawhub install cli-hub
+
+# Or via OpenClaw
 openclaw skills install cli-hub
 
-# Or manually
-git clone https://github.com/dull-bird/cli-hub.git
-cp -r cli-hub ~/.agents/skills/cli-hub
+# Manual
+git clone https://github.com/dull-bird/cli-hub.git ~/.agents/skills/cli-hub
 ```
 
 ## What It Looks Like
