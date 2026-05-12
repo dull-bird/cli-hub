@@ -1,21 +1,21 @@
 # cli-hub
 
-> 一个 Skill 管所有 CLI。
+> 一个 Skill。系统里所有 CLI 工具。零配置。
 
 ```mermaid
 graph LR
-    CH["🔄 cli-hub<br/>一个 Skill<br/>管理所有 CLI"] --> git["🔀 git<br/>版本控制"]
-    CH --> gh["🐙 gh<br/>GitHub CLI"]
-    CH --> docker["🐳 docker<br/>容器"]
-    CH --> kubectl["☸️ kubectl<br/>K8s"]
-    CH --> ffmpeg["🎬 ffmpeg<br/>媒体处理"]
-    CH --> jq["🧩 jq<br/>JSON"]
-    CH --> curl["🌐 curl<br/>HTTP"]
-    CH --> rg["🔎 rg<br/>搜索"]
-    CH --> python3["🐍 python3<br/>脚本"]
-    CH --> node["💚 node<br/>运行时"]
-    CH --> ssh["🔐 ssh<br/>远程"]
-    CH --> more["📦 +50 更多"]
+    CH["🔄 cli-hub<br/>一个 Skill<br/>管理所有 CLI"] --> git["🔀 git"]
+    CH --> gh["🐙 gh"]
+    CH --> docker["🐳 docker"]
+    CH --> kubectl["☸️ kubectl"]
+    CH --> ffmpeg["🎬 ffmpeg"]
+    CH --> jq["🧩 jq"]
+    CH --> curl["🌐 curl"]
+    CH --> rg["🔎 rg"]
+    CH --> python3["🐍 python3"]
+    CH --> node["💚 node"]
+    CH --> ssh["🔐 ssh"]
+    CH --> more["📦 +50 more"]
 
     style CH fill:#4f46e5,color:#fff,stroke:#312e81
     style git fill:#f0fdf4,stroke:#22c55e,color:#166534
@@ -32,101 +32,152 @@ graph LR
     style more fill:#fef3c7,stroke:#f59e0b,color:#92400e
 ```
 
-一个 [AgentSkill](https://agentskills.io)，教会你的 AI Agent 使用**任何** CLI 工具——不用为每个工具写单独的 Skill。
-
-**痛点：** 每个 CLI 工具都要一个 `SKILL.md`，Agent 才会用。20 个工具 = 20 个 Skill = 维护噩梦。
-
-**cli-hub 用一个 Skill 搞定全部。** 你说"提取 JSON 字段""看看我的 PR"，Agent 自动找工具、学接口、执行命令。你什么配置文件都不用碰。
-
 ## 安装
 
 ```bash
 npx skills add dull-bird/cli-hub
 ```
 
-一行搞定。兼容 55+ 个 Agent 平台：OpenClaw、Claude Code、Cursor、Gemini CLI、Copilot、Windsurf、Warp 等。
+搞定。你的 AI Agent 从此知道怎么用系统里任何 CLI 工具。
 
-## 实际效果
+兼容 55+ Agent：OpenClaw、Claude Code、Cursor、Gemini CLI、Copilot、Windsurf、Warp 等。
 
-你说话，Agent 干活。
+## 使用
+
+你说话，Agent 自己找工具。
 
 ```
- 👤  "统计 todos.json 里未完成的数量"
-     ─────────────────────────────────────────────
- 🤖  [cli-hub: 搜索 "json count filter" → jq, yq]
-     [cli-hub: 查 jq → 15 条命令, 关键词: json,filter,transform]
-     [执行: jq '[.[] | select(.completed==false)] | length' todos.json]
-     ─────────────────────────────────────────────
+ 👤  "统计 data.json 里还有几个没完成的待办"
+ 🤖  [cli-hub: 搜索 "json count filter" → jq]
+     [cli-hub: jq 有 15 条命令, 关键词: json, filter, transform]
+     > jq '[.[] | select(.completed==false)] | length' data.json
      3
 
  👤  "看看 docker 在跑什么容器"
-     ─────────────────────────────────────────────
  🤖  [cli-hub: 搜索 "container running" → docker]
-     [cli-hub: 查 docker → 36 条命令, 关键词: container,image,run]
-     [执行: docker ps]
-     ─────────────────────────────────────────────
+     [cli-hub: docker 有 36 条命令, 关键词: container, image, run]
+     > docker ps
      CONTAINER ID  IMAGE         STATUS       NAMES
      a1b2c3d4e5f6  nginx:latest  Up 2 hours   web
 
  👤  "切到日本节点"
-     ─────────────────────────────────────────────
- 🤖  [cli-hub: mihomo/SKILL.md 存在 → 官方 Skill]
+ 🤖  [cli-hub: mihomo/SKILL.md 存在 — 官方 Skill]
      [交给官方 Skill 处理]
-     ─────────────────────────────────────────────
      ✓ 已切换到 日本 1 | SS | ZJ
 ```
 
-不需要 `discover`、不需要 `register`、不需要配置。Agent 首次提到工具时自动发现，之后缓存复用。
+不需要 `discover`、不需要 `register`、不需要配置。第一次用到某个工具时，Agent 当场学会并缓存。
 
-## 工作原理
+---
+
+## 原理（用户视角）
+
+cli-hub 做三件事：
+
+| 步骤 | 说明 |
+|------|------|
+| **1. 关键词匹配** | "提取 json" → 查 `~/.openclaw/cli-registry/.keywords.json` → 找到 jq |
+| **2. 查手册** | 查 `jq.json` → 描述、子命令、参数、help 原文 |
+| **3. 执行命令** | 拼出正确命令 + 参数，运行 |
+
+如果工具还没注册，第 3 步退化为现场跑 `--help`，Agent 读完输出后当场学习。
+
+## 架构（开发者视角）
+
+### 三层知识系统
 
 ```
-用户说 "把 data.json 里的字段提取出来"
+┌──────────────────────────────────────────────────┐
+│ P0: 内建知识库                                     │
+│     50+ 工具，手写描述 + 任务关键词                   │
+│     （json → jq, http → curl, container → docker）│
+├──────────────────────────────────────────────────┤
+│ P1: 智能 help 提取                                │
+│     _extract_summary() 解析 --help 输出            │
+│     生成: summary, commands_text, options_text    │
+├──────────────────────────────────────────────────┤
+│ P2: 关键词反向索引                                 │
+│     .keywords.json 映射 任务词 → 工具名             │
+│     "video" → ffmpeg, "container" → docker       │
+│     从 P0 + 描述分词自动构建                        │
+└──────────────────────────────────────────────────┘
+```
+
+### 注册表条目结构
+
+```json
+{
+  "name": "jq",
+  "description": "命令行 JSON 处理器 — 过滤、转换、查询 JSON 数据",
+  "keywords": ["json", "filter", "transform", "query"],
+  "auto_discovered": {
+    "version": "1.7.1",
+    "summary": "Command-line JSON processor",
+    "usage": "jq [options...] filter [files...]",
+    "commands_text": "filter — 应用过滤器\nmap — 转换数组元素...",
+    "options_text": "-r — 原始输出\n-c — 紧凑输出",
+    "help_raw": "(清洗后的 --help 全文, 最多 5000 字符)",
+    "subcommands": { "filter": {...}, "map": {...} }
+  }
+}
+```
+
+### 决策流程
+
+```
+用户: "提取 JSON 里的字段"
         │
     ┌───▼────────────────────────────┐
-    │ 1. 关键词搜索                   │  "json extract" → jq(匹配2项), yq(1项)
-    │    → 查 .keywords.json         │  找到最合适的工具
+    │ 1. 明确提到了工具名？            │  "用 jq 提取..." → 跳步骤 3
     ├────────────────────────────────┤
-    │ 2. 检查官方 Skill               │  ~/.agents/skills/jq/SKILL.md 存在？
-    │    → 有则交给他                │  作者最懂自己的工具
+    │ 2. 关键词搜索                   │  "json extract" → jq (匹配2), yq (1)
+    │    → 匹配任务到工具              │
     ├────────────────────────────────┤
-    │ 3. 查注册表                     │  jq.json: 二进制路径, 15个子命令, help
-    │    → 首次使用后缓存             │  知道怎么调用
+    │ 3. 检查官方 Skill              │  ~/.agents/skills/jq/SKILL.md?
+    │    → 有则交给它                 │
     ├────────────────────────────────┤
-    │ 4. 现场 --help（后备）          │  jq --help → 当场学习
-    │    → 什么都没缓存时             │  顺手注册，下次直接用
+    │ 4. 查注册表                     │  jq.json: 描述, 命令, help_raw
+    │    → 构造命令                   │  未知工具则直接解析 help_raw
+    ├────────────────────────────────┤
+    │ 5. 现场 --help（兜底）          │  什么都没缓存 → 现场跑 --help
+    │    → 学习 + 自动注册            │
     └────────────────────────────────┘
 ```
 
-## 为什么比 N 个 Skill 好
+### 版本追踪
 
-| N 个 Skill 的做法 | cli-hub 的做法 |
-|---|---|
-| 20 个工具 = 20 个文件要维护 | 1 个 Skill 全搞定 |
-| 工具更新后 Skill 过时 | `--help` 永远最新 |
-| 加一个工具 = 写一个新 Skill | 加一个工具 = 说它的名字 |
-| 不知道系统里有什么，靠猜 | Agent 自己扫描 PATH 发现 |
-| 0 关键词 — "提取 JSON" 找不到 jq | 50+ 工具内建任务关键词索引 |
+每个注册工具存储版本号（从 `<tool> --version` 提取）。`check-stale` 检测已过期的工具：
 
-简单说：教 Agent 读 `--help`，从此告别手写 SKILL.md。
+```bash
+python3 cli-registry.py check-stale          # 列出过期工具
+python3 cli-registry.py check-stale --update # 自动重注册
+```
 
-## 技术参考
+### 脚本命令
 
-注册表是轻量 JSON（非 YAML，非 Markdown），存在 `~/.openclaw/cli-registry/`。示例见 [examples/registry-entry.json](examples/registry-entry.json)。
+| 命令 | 说明 |
+|------|------|
+| `discover` | 扫描 PATH，注册所有已知工具 |
+| `list` | 列出已注册工具及描述 |
+| `lookup <名称>` | 完整信息：描述、关键词、命令、选项、help |
+| `search <关键词>` | 按任务搜索工具（如 `search json extract`） |
+| `check-stale` | 检测已更新的工具 |
+| `register <名称>` | 手动注册 CLI 工具 |
+| `remove <名称>` | 从注册表移除 |
 
-| 脚本命令 | 说明 |
-|---|---|
-| `cli-registry.py discover` | 扫描 PATH，注册所有已知工具 |
-| `cli-registry.py list` | 列出所有已注册工具 |
-| `cli-registry.py lookup <name>` | 查看工具详情：描述、关键词、子命令 |
-| `cli-registry.py search <关键词...>` | 按任务搜索工具（如 `search json filter`） |
+### 未知工具的 help 解析
 
-内建知识库覆盖 50+ 工具，含手写描述和任务关键词。完整列表见 [scripts/cli-registry.py](scripts/cli-registry.py)。
+对于不在知识库（P0）中的工具，Agent 依赖 `help_raw`。SKILL.md 教会了 LLM 如何解析 help 输出：
+
+1. 找到 usage 行（`tool [OPTIONS] COMMAND [ARGS]`）
+2. 扫描命令区块（以 `:` 结尾的标题 + 缩进块）
+3. 识别选项（`-x` 或 `--option` 开头的行）
+4. 提取描述（第一个非 flag 的实质句子）
+
+`commands_text` 和 `options_text` 提供了预解析的结构化摘要，大部分情况下 LLM 不需要从零解析原始 help。
 
 ## 相关链接
 
 - [AgentSkills 规范](https://agentskills.io)
 - [Vercel Skills](https://github.com/vercel-labs/skills) — `npx skills`
-- [OpenClaw](https://docs.openclaw.ai)
-- [ClawHub](https://clawhub.ai)
 - 灵感来源：[prefrontalsys/register-tool](https://github.com/prefrontalsys/register-tool)

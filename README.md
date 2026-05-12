@@ -1,20 +1,20 @@
 # cli-hub
 
-> One Skill to manage every CLI tool on your system.
+> One Skill. Every CLI tool on your system. Zero config.
 
 ```mermaid
 graph LR
-    CH["🔄 cli-hub<br/>One Skill<br/>All CLIs"] --> git["🔀 git<br/>version control"]
-    CH --> gh["🐙 gh<br/>GitHub CLI"]
-    CH --> docker["🐳 docker<br/>containers"]
-    CH --> kubectl["☸️ kubectl<br/>Kubernetes"]
-    CH --> ffmpeg["🎬 ffmpeg<br/>media"]
-    CH --> jq["🧩 jq<br/>JSON"]
-    CH --> curl["🌐 curl<br/>HTTP"]
-    CH --> rg["🔎 rg<br/>search"]
-    CH --> python3["🐍 python3<br/>scripts"]
-    CH --> node["💚 node<br/>runtime"]
-    CH --> ssh["🔐 ssh<br/>remote"]
+    CH["🔄 cli-hub<br/>One Skill<br/>All CLIs"] --> git["🔀 git"]
+    CH --> gh["🐙 gh"]
+    CH --> docker["🐳 docker"]
+    CH --> kubectl["☸️ kubectl"]
+    CH --> ffmpeg["🎬 ffmpeg"]
+    CH --> jq["🧩 jq"]
+    CH --> curl["🌐 curl"]
+    CH --> rg["🔎 rg"]
+    CH --> python3["🐍 python3"]
+    CH --> node["💚 node"]
+    CH --> ssh["🔐 ssh"]
     CH --> more["📦 +50 more"]
 
     style CH fill:#4f46e5,color:#fff,stroke:#312e81
@@ -32,101 +32,154 @@ graph LR
     style more fill:#fef3c7,stroke:#f59e0b,color:#92400e
 ```
 
-An [AgentSkill](https://agentskills.io) that teaches your AI agent how to use **any** CLI tool — without writing a separate skill for each one.
-
-**The problem:** every CLI tool needs a `SKILL.md` for an agent to use it. 20 tools = 20 skills = maintenance hell.
-
-**cli-hub replaces that with one skill.** When you say "extract JSON fields" or "check my PRs", your agent automatically finds the right tool, learns its interface, and runs the command. You never touch a config file.
-
 ## Install
 
 ```bash
 npx skills add dull-bird/cli-hub
 ```
 
-That's it. Works on 55+ agents including OpenClaw, Claude Code, Cursor, Gemini CLI, Copilot, Windsurf, Warp, and more.
+Done. Your AI agent now knows how to use any CLI tool on your system.
 
-## What It Looks Like
+Works on 55+ agents: OpenClaw, Claude Code, Cursor, Gemini CLI, Copilot, Windsurf, Warp, and more.
 
-You talk. Your agent figures out the tool.
+## Use
+
+You talk. The agent figures out which tool to use.
 
 ```
- 👤  "count uncompleted todos in todos.json"
-     ─────────────────────────────────────────────
- 🤖  [cli-hub: search "json count filter" → jq, yq]
-     [cli-hub: lookup jq → 15 commands, keyword: json,filter,transform]
-     [executes: jq '[.[] | select(.completed==false)] | length' todos.json]
-     ─────────────────────────────────────────────
+ 👤  "how many uncompleted todos are in data.json?"
+ 🤖  [cli-hub: search "json count filter" → jq]
+     [cli-hub: jq has 15 commands, keywords: json, filter, transform]
+     > jq '[.[] | select(.completed==false)] | length' data.json
      3
 
  👤  "what containers are running?"
-     ─────────────────────────────────────────────
  🤖  [cli-hub: search "container running" → docker]
-     [cli-hub: lookup docker → 36 commands, keyword: container,image,run]
-     [executes: docker ps]
-     ─────────────────────────────────────────────
+     [cli-hub: docker has 36 commands, keywords: container, image, run]
+     > docker ps
      CONTAINER ID  IMAGE         STATUS       NAMES
      a1b2c3d4e5f6  nginx:latest  Up 2 hours   web
 
  👤  "switch to Japan proxy"
-     ─────────────────────────────────────────────
- 🤖  [cli-hub: mihomo/SKILL.md found → official skill]
+ 🤖  [cli-hub: mihomo/SKILL.md found — official skill]
      [defers to official skill]
-     ─────────────────────────────────────────────
      ✓ Switched to Japan 1 | SS | ZJ
 ```
 
-No `discover`, no `register`, no config. The agent auto-discovers tools on first mention and caches them for next time.
+No `discover`, no `register`, no config files. The first time you mention a tool, the agent learns it and caches it.
 
-## How It Works
+---
+
+## How it works (for users)
+
+cli-hub does three things:
+
+| Step | What happens |
+|------|-------------|
+| **1. Keyword match** | "extract json" → search `~/.openclaw/cli-registry/.keywords.json` → finds jq |
+| **2. Read the manual** | Looks up `jq.json` → description, subcommands, options, help text |
+| **3. Run the command** | Constructs the right command with the right flags |
+
+If a tool isn't in the registry yet, step 3 falls back to running `<tool> --help` live. The agent reads the output and learns on the spot.
+
+## Architecture (for developers)
+
+### Three-layer knowledge system
 
 ```
-User says "extract JSON fields from data.json"
+┌──────────────────────────────────────────────────┐
+│ P0: Built-in knowledge base                       │
+│     50+ tools with hand-written descriptions      │
+│     and task keywords (json → jq, http → curl)    │
+│     → "External CLI: jq" → "Lightweight JSON... │
+├──────────────────────────────────────────────────┤
+│ P1: Smart help extraction                        │
+│     _extract_summary() parses --help output      │
+│     to auto-generate descriptions                │
+│     Also stores: commands_text, options_text      │
+├──────────────────────────────────────────────────┤
+│ P2: Keyword reverse index                        │
+│     .keywords.json maps tasks → tools            │
+│     "video" → ffmpeg, "container" → docker       │
+│     Auto-built from P0 + description tokens       │
+└──────────────────────────────────────────────────┘
+```
+
+### Registry entry structure
+
+```json
+{
+  "name": "jq",
+  "description": "Lightweight command-line JSON processor",
+  "keywords": ["json", "filter", "transform", "query"],
+  "auto_discovered": {
+    "version": "1.7.1",
+    "summary": "Command-line JSON processor",
+    "usage": "jq [options...] filter [files...]",
+    "commands_text": "filter — Apply a filter to the input\nmap — Transform...",
+    "options_text": "-r — Raw output\n-c — Compact output",
+    "help_raw": "(cleaned --help output, max 5000 chars)",
+    "subcommands": { "filter": {...}, "map": {...} }
+  }
+}
+```
+
+### Decision flow
+
+```
+User: "extract JSON fields from data.json"
         │
     ┌───▼────────────────────────────┐
-    │ 1. Keyword search              │  "json extract" → jq (match 2), yq (1)
-    │    → asks .keywords.json       │  Finds best tool for the task
+    │ 1. Tool mentioned explicitly?  │  "use jq to..." → go to step 3
     ├────────────────────────────────┤
-    │ 2. Official skill check        │  ~/.agents/skills/jq/SKILL.md?
-    │    → if exists, defer to it    │  Authors know their tool best
+    │ 2. Keyword search              │  "json extract" → jq (2 hits), yq (1)
+    │    → matches tool to task      │
     ├────────────────────────────────┤
-    │ 3. Registry lookup             │  jq.json: binary, 15 subcommands, help
-    │    → cached on first use       │  Knows exactly how to run it
+    │ 3. Official skill check        │  ~/.agents/skills/jq/SKILL.md?
+    │    → defer if exists           │
     ├────────────────────────────────┤
-    │ 4. Live --help (fallback)      │  jq --help → learn on the spot
-    │    → if nothing cached yet     │  Self-registers for next time
+    │ 4. Registry lookup             │  jq.json: description, commands, help_raw
+    │    → construct command         │  If unknown tool: parse help_raw directly
+    ├────────────────────────────────┤
+    │ 5. Live --help (fallback)      │  Nothing cached → run --help now
+    │    → learn + auto-register     │
     └────────────────────────────────┘
 ```
 
-## Why This Beats N Skills
+### Version tracking
 
-| N Skills approach | cli-hub approach |
-|---|---|
-| 20 tools = 20 files to maintain | 1 skill covers everything |
-| Skills go stale when tools update | `--help` is always current |
-| Adding a tool = writing a new skill | Adding a tool = saying its name |
-| No discovery — you must know what exists | Agent finds tools on your PATH automatically |
-| 0 keywords — "extract JSON" doesn't match `jq` | 50+ tools indexed by task keywords |
+Every registered tool stores its version (extracted from `<tool> --version`). Run `check-stale` to find tools that have been updated since registration:
 
-Think of it as teaching your agent to read `--help` — so you never write a SKILL.md again.
+```bash
+python3 cli-registry.py check-stale          # show stale tools
+python3 cli-registry.py check-stale --update # auto re-register
+```
 
-## Technical Reference
+### CLI reference
 
-Registry entries are lightweight JSON (no YAML, no markdown frontmatter). Stored in `~/.openclaw/cli-registry/`. See [examples/registry-entry.json](examples/registry-entry.json).
+| Command | Description |
+|---------|-------------|
+| `discover` | Scan PATH, register all known binaries |
+| `list` | Show all registered tools with descriptions |
+| `lookup <name>` | Full tool info: description, keywords, commands, options, help |
+| `search <keyword...>` | Find tools by task (e.g. `search json extract`) |
+| `check-stale` | Detect tools that have been updated |
+| `register <name>` | Manually register a CLI tool |
+| `remove <name>` | Remove from registry |
 
-| Script command | What it does |
-|---|---|
-| `cli-registry.py discover` | Scan PATH, register all known tools |
-| `cli-registry.py list` | Show all registered tools |
-| `cli-registry.py lookup <name>` | Full tool info: desc, keywords, subcommands |
-| `cli-registry.py search <keyword...>` | Find tools by task (e.g. `search json filter`) |
+### Help parsing for unknown tools
 
-Built-in knowledge base covers 50+ tools with hand-written descriptions and task keywords. See [scripts/cli-registry.py](scripts/cli-registry.py) for the full list.
+When a tool is not in the knowledge base (P0), the agent relies on `help_raw` — the tool's own `--help` output. The SKILL.md teaches the LLM how to parse help text:
+
+1. Find the usage line (`tool [OPTIONS] COMMAND [ARGS]`)
+2. Scan for command sections (headings ending with `:` followed by indented blocks)
+3. Identify options (lines starting with `-x` or `--option`)
+4. Extract the summary (first descriptive line)
+
+`commands_text` and `options_text` provide pre-parsed structured summaries, so the LLM rarely needs to parse raw help from scratch.
 
 ## Related
 
 - [AgentSkills spec](https://agentskills.io)
 - [Vercel Skills](https://github.com/vercel-labs/skills) — `npx skills`
-- [OpenClaw](https://docs.openclaw.ai)
-- [ClawHub](https://clawhub.ai)
 - Inspired by [prefrontalsys/register-tool](https://github.com/prefrontalsys/register-tool)
