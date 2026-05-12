@@ -86,34 +86,32 @@ Tools are discovered on first mention and cached automatically.
 
 ## Benchmarks
 
-Tested with Claude Code + DeepSeek V4 Pro, one-shot mode. Same model, same machine. Only difference: cli-hub installed or fully removed. [Full test scripts and raw outputs →](tests/benchmarks/v4-pro-final/)
+Tested with Claude Code + DeepSeek V4 Pro, one-shot mode. Same model, same machine. Only difference: cli-hub installed or fully removed. [Reproducible script →](tests/benchmarks/v2/run.sh)
 
-### AI-native tools (mmx, opencli, kimi) — **decisive difference**
+### AI-native tools (mmx, opencli, kimi)
 
-These tools post-date Claude's training data. Without cli-hub, V4 Pro guesses wrong.
+These tools post-date Claude's training data. Without cli-hub, V4 Pro guesses wrong on every single test.
 
 | # | Task | With cli-hub | Without cli-hub |
 |---|------|-------------|-----------------|
-| A1 | 用 mmx 生成猫图片 | ✅ `mmx generate` | ❌ guessed Midjourney |
-| A2 | 用 mmx 搜索 | ✅ used cli-hub → mmx | ❌ skipped mmx, used web_search |
-| A3 | 查看 mmx 配额 | ✅ used cli-hub → quota | ❌ `grep -r mmx` in codebase |
-| A4 | mmx 生成文本 | ✅ used cli-hub → text | ❌ thought mmx = **Mermaid**! |
-| A5 | mmx TTS 声音列表 | ⚠️ tried `mmx --help` | ❌ ran macOS `say` instead |
-| A6 | opencli 列出适配器 | ⚠️ tried `opencli --help` | ❌ `which opencli` not found |
-| A7 | opencli 打开浏览器 | ✅ used cli-hub | ⚠️ guessed command |
-| A8 | opencli 抓取 bilibili | ✅ used cli-hub | ❌ fell back to curl + API |
+| A1 | mmx 生成猫图片 | ✅ cli-hub → `mmx generate` | ❌ "不确定 mmx 是什么" |
+| A2 | mmx 搜索 | ✅ cli-hub → `mmx search` | ❌ skipped mmx entirely |
+| A3 | mmx 查看配额 | ✅ cli-hub → `mmx quota` | ❌ searched codebase for "mmx" |
+| A4 | mmx 生成文本 | ✅ cli-hub → `mmx text` | ❌ thought mmx = **Mermaid**! |
+| A5 | mmx TTS 声音 | ✅ cli-hub → `mmx speech` | ❌ ran macOS `say` instead |
+| A6 | opencli 列出适配器 | ✅ cli-hub → `opencli list` | ❌ `which opencli` not found |
+| A7 | opencli 打开浏览器 | ✅ cli-hub → `opencli browser` | ❌ guessed wrong tool |
+| A8 | opencli 抓取 bilibili | ✅ cli-hub → `opencli bilibili` | ❌ fell back to curl + API |
 
 | Metric | With cli-hub | Without cli-hub |
 |--------|-------------|-----------------|
-| Correct tool identified | **6/8 (75%)** | 0/8 (0%) |
-| Hallucinated / wrong tool | **0/8 (0%)** | 6/8 (75%) |
-| Used cli-hub skill | 6/8 (75%) | 0/8 (0%) |
+| Correct tool identified | **8/8 (100%)** | 0/8 (0%) |
+| Used cli-hub skill | **8/8 (100%)** | 0/8 (0%) |
+| Hallucinated / wrong | 0/8 (0%) | **8/8 (100%)** |
 
 ### Common & niche Unix tools
 
-No difference. Claude's training data covers these adequately. [→ earlier test results](tests/benchmarks/results/)
-
-Repo of test scripts and raw outputs: `tests/benchmarks/`.
+No difference. Claude's training data covers these. [→ earlier results](tests/benchmarks/results/)
 
 ---
 

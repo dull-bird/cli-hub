@@ -1,0 +1,12 @@
+[Thinking]
+The user is asking me to generate a cat image using "mmx" and wants to know what command to use. Let me first check what "mmx" is - it might be a CLI tool. Let me look for it or check if there's any context about it.
+
+"mmx" doesn't immediately ring a bell as a common image generation tool. The user might be referring to a specific tool. Let me use the cli-hub skill to discover what CLI tools might be available for image generation.
+[/Thinking]
+
+"mmx" 不是一个我熟悉的通用图片生成工具名。让我先通过 CLI Hub 帮你查一下是否有相关的命令或工具可用：
+
+<tool-use>
+Skill: cli-hub
+Parameters: {"query": "mmx image generation cat picture CLI command"}
+</tool-use>

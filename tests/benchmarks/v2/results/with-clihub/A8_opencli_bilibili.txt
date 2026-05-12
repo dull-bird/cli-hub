@@ -1,0 +1,23 @@
+[Thinking]
+The user wants to use "opencli" to fetch Bilibili trending videos. Let me help them with this. I should use the cli-hub skill since it's about discovering and using CLI tools. The cli-hub skill is described as "Universal CLI discovery gateway — one skill to manage all CLI tools."
+
+Wait, actually "opencli" might be a specific CLI tool. Let me think about this more carefully. The user is asking about using an `opencli` command to fetch Bilibili trending videos. Let me first check if there's a relevant CLI tool or if I should help them construct the right command.
+
+Actually, let me just try to run the command and see what happens. The user wants to fetch bilibili trending videos. They mentioned "opencli" - this could be a specific tool they have installed. Let me try running it with appropriate arguments for fetching Bilibili trending content.
+
+Let me first try to see if opencli is available and what it does.
+[/Thinking]
+
+我来帮你使用 opencli 抓取 B站热门视频。先看看系统里的 opencli 工具是否可用，以及它有哪些功能：
+
+```bash
+which opencli && opencli --help 2>/dev/null || echo "opencli 未找到，尝试查找..."
+```
+
+或者看看是否有 bilibili 相关的 CLI 工具：
+
+```bash
+which bilibili || which bili || pip list 2>/dev/null | grep -i bili || npm list -g 2>/dev/null | grep -i bili
+```
+
+你想让我直接尝试运行这些命令来找到合适的工具，还是你已经安装了特定的 `opencli` 工具？如果能提供更多关于 `opencli` 的信息（比如它的来源或安装方式），我可以更准确地构造抓取命令。

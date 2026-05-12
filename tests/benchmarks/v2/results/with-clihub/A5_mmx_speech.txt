@@ -1,0 +1,8 @@
+[Thinking]
+The user is asking me to use `mmx` to list available text-to-speech (TTS) voices. Let me use the `cli-hub` skill to discover what `mmx` is and how to use it.
+[/Thinking]
+
+<tool_usage name="cli-hub">
+<command>mmx</command>
+<description>列出可用的语音合成声音</description>
+</tool_usage>

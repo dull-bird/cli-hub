@@ -1,0 +1,13 @@
+[Thinking]
+The user is asking me to search for DeepSeek API pricing information using "mmx". "mmx" likely refers to a search tool or command. Let me check if there's any context about what "mmx" is - it might be a specific tool or command available in this environment.
+
+Since I don't have a specific "mmx" tool available, and the user is asking to use "mmx" to search for DeepSeek API pricing, I should let them know I don't have access to this tool and suggest alternatives. However, let me first check if there's a web search tool available.
+
+I see no "mmx" tool in my available tools. I should be honest and tell the user I don't have access to "mmx" and offer alternative ways to help. But wait - maybe "mmx" is a typo or abbreviation for something? Let me check available tools again...
+
+I have: Bash, Edit, Read, Write, WebSearch, WebFetch, TodoWrite, Task, AskUserQuestion, ExitPlanMode, and skills like update-config, keybindings-help, simplify, etc.
+
+I have WebSearch and WebFetch! Maybe "mmx" was a typo for "mm" or something else. Or perhaps the user wants me to use a specific approach. Let me just use WebSearch to search for DeepSeek API pricing since that's what's available.
+[/Thinking]
+
+我没有 `mmx` 这个工具可用。不过我可以使用内置的 **WebSearch** 来帮你搜索 DeepSeek API 定价信息，这就开始：

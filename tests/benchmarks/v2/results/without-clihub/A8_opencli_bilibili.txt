@@ -1,0 +1,87 @@
+[Thinking]
+The user is asking me to use "opencli" to fetch Bilibili trending/popular videos. Let me think about what "opencli" is - it's likely referring to OpenClient CLI, a tool for interacting with various platforms.
+
+Actually, let me reconsider. "opencli" might refer to an open-source CLI tool. I should first check if there's such a tool available in the environment or if I need to help the user with an alternative approach.
+
+Let me first explore what tools are available and check if there's an "opencli" command or if we need to install something.
+[/Thinking]
+
+我来帮你抓取 Bilibili 热门视频。先检查一下环境中是否有 `opencli` 工具，以及可用的方法。
+Tool: Bash
+Arguments: {"command": "which opencli 2>/dev/null; type opencli 2>/dev/null; command -v opencli 2>/dev/null", "description": "Check if opencli is installed"}
+Observation: [toolu_vrtx_01BiK6pjt...] Exit code 1
+
+没有找到 `opencli` 命令。让我通过其他方式确认一下——
+Tool: Bash
+Arguments: {"command": "pip list 2>/dev/null | grep -i opencli; pip3 list 2>/dev/null | grep -i opencli; npm list -g 2>/dev/null | grep -i opencli", "description": "Search for opencli in pip and npm"}
+Observation: Exit code 1
+
+环境中没有安装 `opencli`。Bilibili 有公开的 API 可以直接调用。让我用 `curl` 直接抓取 Bilibili 热门视频：
+Tool: Bash
+Arguments: {"description": "Fetch Bilibili trending videos via API", "command": "curl -s 'https://api.bilibili.com/x/web-interface/popular?ps=20' \\\n  -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' \\\n  -H 'Referer: https://www.bilibili.com' | python3 -c \"\nimport json, sys\n\ndata = json.load(sys.stdin)\nif data.get('code') != 0:\n    print(f'API Error: {data.get(\\\"message\\\", \\\"unknown\\\")}')\n    sys.exit(1)\n\nvideos = data.get('data', {}).get('list', [])\nprint(f'{\\\"序号\\\":<4} {\\\"标题\\\":<50} {\\\"UP主\\\":<20} {\\\"播放量\\\":<12} {\\\"弹幕数\\\":<8}')\nprint('-' * 110)\n\nfor i, v in enumerate(videos[:20], 1):\n    title = v.get('title', 'N/A')[:48]\n    owner = v.get('owner', {}).get('name', 'N/A')[:18]\n    stat = v.get('stat', {})\n    views = stat.get('view', 0)\n    danmaku = stat.get('danmaku', 0)\n    \n    def fmt(n):\n        if n >= 10000:\n            return f'{n/10000:.1f}万'\n        return str(n)\n    \n    print(f'{i:<4} {title:<50} {owner:<20} {fmt(views):<12} {fmt(danmaku):<8}')\n    print(f'     ▶ bilibili.com/video/{v.get(\\\"bvid\\\", \\\"\\\")}')\n    if i < len(videos[:20]):\n        print()\n\"", "timeout": 15000}
+Observation: [toolu_vrtx_01FCoBJeT...] 序号   标题                                                 UP主                  播放量          弹幕数    
+--------------------------------------------------------------------------------------------------------------
+
+1    这堂班会课，为你准备了400多天。                                 一只大哈鱼                159.8万      4.3万   
+     ▶ bilibili.com/video/BV1y6EmBDEto
+
+2    花两百搬空了小学���口的“三无”小摊！老板激动到语无伦次…                    牛逼逼                    1084.8万     3.3万   
+     ▶ bilibili.com/video/BV1i7VRByE5C
+
+3    我造了一台“高智能”自动分类垃圾桶！                              苏打baka                 133.6万      5133   
+     ▶ bilibili.com/video/BV1JQVFBiE1B
+
+4    外国玩家为了黑神话悟空开始阅读《西游记》，看到大闹天空这一段连连惊呼        叨叨冯聊音乐                47.5万       4951   
+     ▶ bilibili.com/video/BV1pDExBXEi4
+
+5    我花了6天，用最土的办法做了条龙！                               滔滔Talks                19.2万       1983   
+     ▶ bilibili.com/video/BV1t8E6zLEtB
+
+6    这绝对是视频后期工作量最大的游戏                                  森纳映画                   158.4万      1.9万   
+     ▶ bilibili.com/video/BV1VkE5BeE1p
+
+7    这不社死吗？【上海地铁】                                      力元君                    108.5万      1.6万   
+     ▶ bilibili.com/video/BV1XMEdBKETP
+
+8    如何让一片铝，带你看清风的方向                                  小邵本邵                   18.4万       1590   
+     ▶ bilibili.com/video/BV1hpVpBQEVe
+
+9    人  工  制  帐                                            鹤吱菌                    40.0万       7607   
+     ▶ bilibili.com/video/BV1zaE7BkEFk
+
+10   在厨房里安装窃听器，里面暗流涌动，远超你想象                           记录区                      48.7万       8991   
+     ▶ bilibili.com/video/BV1kEEXBzE5v
+
+11   百亿项目    百亿受骗                                      HOLA小测                   21.5万       4999   
+     ▶ bilibili.com/video/BV1VMEqBqE1y
+
+12   【阅片无数Ⅱ】把20年前的哈士奇巧克力喂给现在的哈士奇巧克力吃会发...          刘老师说电影                 13.0万       6484   
+     ▶ bilibili.com/video/BV1tUERByEuQ
+
+13   跑40公里跨越京冀，就为吃这一口                                   吃货请闭眼                  9.6万        4836   
+     ▶ bilibili.com/video/BV18GEfBPEVr
+
+14   本季最有钱 NPC，一个响指开一枪！【边狱巴士】                          逗比的预言家                 11.4万       7536   
+     ▶ bilibili.com/video/BV1SAExBREpa
+
+15   街头背刺挑战！❤️                                         ˗ˋˏ翠花不太脆ˎˊ˗          56.5万       4512   
+     ▶ bilibili.com/video/BV1MuERBYEkc
+
+16   拼好饭的谜底终于揭开。吃一口直接走了10分钟。                          麦总小号                   62.5万       2.2万   
+     ▶ bilibili.com/video/BV1mMEtBiE3H
+
+17   无人的士，你敢坐吗？                                         所长林超                   29.1万       3278   
+     ▶ bilibili.com/video/BV1hsEfBUE95
+
+18   印度老哥说自己是河南人                                      😺🧠🐴                    136.9万      1.0万   
+     ▶ bilibili.com/video/BV1epE4zVEjB
+
+19   沉浸式体验中国南海的渔民生活！受台风影响被困海岛无法外出拍摄，就当...          小东在努力                  14.0万       4504   
+     ▶ bilibili.com/video/BV1isE3BQE5m
+
+20   一口气看完西汉210年历史！                                    唠点历史                   25.2万       6471   
+     ▶ bilibili.com/video/BV1i8VrBxEfi
+
+✅ 已成功抓取 Bilibili 今日热门视频 Top 20！
+
+**总结：** 环境中没有安装 `opencli` 这个工具，我改用 Bilibili 官方 API (`api.bilibili.com/x/web-interface/popular`) 直接获取了热门视频列表。如果你想安装 `opencli`，可以告诉我具体是哪个工具（pip/npm/其他），我来帮你安装并配置。

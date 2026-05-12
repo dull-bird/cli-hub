@@ -1,0 +1,11 @@
+[Thinking]
+The user is asking me to use "mmx" to generate a short introduction about AI agents. Let me think about what "mmx" might refer to here.
+
+Looking at the available skills, I don't see a direct "mmx" command. It could be a CLI tool that the user wants me to use. Let me check if "cli-hub" can help me discover what mmx is and how to use it.
+
+"mmx" could be a RAG/documentation tool, an LLM CLI tool, or something else. Let me use the cli-hub skill to discover if there's a known CLI tool called mmx.
+[/Thinking]
+
+<tool_call name="cli-hub">
+<tool_query>mmx CLI tool - what is mmx and how to use it</tool_query>
+</tool_call>

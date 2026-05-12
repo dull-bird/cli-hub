@@ -1,0 +1,9 @@
+[Thinking]
+The user wants to use "opencli" to open github.com in a browser. Let me use the cli-hub skill to find and execute the right CLI tool for this.
+[/Thinking]
+
+我来通过 cli-hub 查找并使用 open 命令在浏览器中打开 github.com。
+
+```bash
+open https://github.com
+```

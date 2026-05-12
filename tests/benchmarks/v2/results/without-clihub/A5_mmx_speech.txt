@@ -1,0 +1,19 @@
+[Thinking]
+The user is asking me to list available text-to-speech (TTS) voices using "mmx" - likely referring to macOS's `say` command or some TTS tool. Let me try to interpret this:
+
+"mmx" could be a typo or reference. On macOS, the `say` command has a `-v ?` option to list voices, or `system_profiler` might help.
+
+Let me try running commands to list available speech synthesis voices on macOS. The standard way is:
+- `say -v ?` - lists all voices
+- Or they might mean something else by "mmx"
+
+Let me try running `say -v ?` first, which is the macOS text-to-speech command.
+
+Actually, "mmx" might be referring to something else. Let me just run the macOS say command to list voices.
+[/Thinking]
+
+我来列出 macOS 上可用的语音合成声音：
+
+```bash
+say -v '?'
+```

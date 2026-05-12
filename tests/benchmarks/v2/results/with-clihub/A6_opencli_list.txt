@@ -1,0 +1,14 @@
+[Thinking]
+The user is asking me to use "opencli" to list all available website adapters. Let me think about what "opencli" might refer to. Since I have the `cli-hub` skill available which is described as "Universal CLI discovery gateway — one skill to manage all CLI tools", this could be the right tool to use. Let me try running a command to list available adapters.
+
+Actually, "opencli" might be a specific CLI tool. Let me first try to find it or use cli-hub to discover it.
+
+Let me start by trying to run `opencli` directly to see what happens. If it's not installed or available, I can use the cli-hub skill.
+[/Thinking]
+
+I'll use the cli-hub skill to help discover and invoke the `opencli` tool for listing website adapters.
+
+<tool_call name="Skill">
+  <action>cli-hub</action>
+  <command>opencli --help 2>/dev/null || opencli help 2>/dev/null || which opencli 2>/dev/null</command>
+</tool_call>

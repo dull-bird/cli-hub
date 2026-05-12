@@ -1,0 +1,11 @@
+[Thinking]
+The user wants to open github.com in their browser using a command called "opencli". Let me help them with that. The `opencli` command likely refers to a CLI tool that opens URLs. Let me run the command to open github.com in the browser.
+
+I should use the `opencli` command as requested.
+[/Thinking]
+
+I'll run the `opencli` command to open github.com in your browser.
+
+```bash
+opencli https://github.com
+```

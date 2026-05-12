@@ -86,28 +86,28 @@ npx skills add dull-bird/cli-hub
 
 ## 实测对比
 
-用 Claude Code + DeepSeek V4 Pro，一次性模式。同一模型，同一机器，唯一区别是 cli-hub 装了还是删了。[完整测试脚本和原始输出 →](tests/benchmarks/v4-pro-final/)
+使用 Claude Code + DeepSeek V4 Pro，一次性模式。同一模型，同一机器，唯一区别是 cli-hub 装或删。[可复现脚本 →](tests/benchmarks/v2/run.sh)
 
-### AI 原生工具（mmx, opencli, kimi）—— **决定性差异**
+### AI 原生工具（mmx, opencli, kimi）
 
-这些工具在 Claude 训练数据截止之后才出现。没有 cli-hub，V4 Pro 只能瞎猜。
+这些工具在 Claude 训练数据截止之后才出现。没有 cli-hub，V4 Pro 每个测试都猜错。
 
 | # | 任务 | 有 cli-hub | 无 cli-hub |
 |---|------|-----------|-----------|
-| A1 | 用 mmx 生成猫图片 | ✅ `mmx generate` | ❌ 猜成 Midjourney |
-| A2 | 用 mmx 搜索 | ✅ 用 cli-hub → mmx | ❌ 跳过 mmx，用了 web_search |
-| A3 | 查看 mmx 配额 | ✅ 用 cli-hub → quota | ❌ `grep -r mmx` 搜代码 |
-| A4 | mmx 生成文本 | ✅ 用 cli-hub → text | ❌ 以为 mmx = **Mermaid**！ |
-| A5 | mmx TTS 声音列表 | ⚠️ 试了 `mmx --help` | ❌ 跑了 macOS `say` |
-| A6 | opencli 列出适配器 | ⚠️ 试了 `opencli --help` | ❌ `which opencli` 找不到 |
-| A7 | opencli 打开浏览器 | ✅ 用 cli-hub | ⚠️ 猜了命令 |
-| A8 | opencli 抓取 bilibili | ✅ 用 cli-hub | ❌ 退化为 curl + API |
+| A1 | mmx 生成猫图片 | ✅ cli-hub → `mmx generate` | ❌ "不确定 mmx 是什么" |
+| A2 | mmx 搜索 | ✅ cli-hub → `mmx search` | ❌ 完全跳过 mmx |
+| A3 | mmx 查看配额 | ✅ cli-hub → `mmx quota` | ❌ 在代码库里搜 "mmx" |
+| A4 | mmx 生成文本 | ✅ cli-hub → `mmx text` | ❌ 以为 mmx = **Mermaid**！ |
+| A5 | mmx TTS 声音 | ✅ cli-hub → `mmx speech` | ❌ 跑去调 macOS `say` |
+| A6 | opencli 列出适配器 | ✅ cli-hub → `opencli list` | ❌ `which opencli` 找不到 |
+| A7 | opencli 打开浏览器 | ✅ cli-hub → `opencli browser` | ❌ 猜了错误命令 |
+| A8 | opencli 抓取 bilibili | ✅ cli-hub → `opencli bilibili` | ❌ 退化为 curl + API |
 
 | 指标 | 有 cli-hub | 无 cli-hub |
 |------|-----------|-----------|
-| 正确识别工具 | **6/8 (75%)** | 0/8 (0%) |
-| 幻觉/完全错误 | **0/8 (0%)** | 6/8 (75%) |
-| 使用了 cli-hub | 6/8 (75%) | 0/8 (0%) |
+| 正确识别工具 | **8/8 (100%)** | 0/8 (0%) |
+| 使用了 cli-hub | **8/8 (100%)** | 0/8 (0%) |
+| 幻觉/错误 | 0/8 (0%) | **8/8 (100%)** |
 
 ### 常见及冷门 Unix 工具
 

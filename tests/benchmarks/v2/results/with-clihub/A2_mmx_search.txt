@@ -1,0 +1,10 @@
+[Thinking]
+The user wants me to search for DeepSeek API pricing information using "mmx". Let me first check what "mmx" is - it might be a CLI tool available through the cli-hub skill. Let me use the cli-hub skill to discover and use this tool.
+[/Thinking]
+
+好的，让我先通过 cli-hub 来找到 mmx 这个工具。
+
+<tool_call name="skill">
+  <tool_name>cli-hub</tool_name>
+  <parameter name="query">mmx search deepseek api pricing</parameter>
+</tool_call>
