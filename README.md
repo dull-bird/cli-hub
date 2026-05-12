@@ -63,7 +63,7 @@ Works with **OpenClaw, Claude Code, Codex CLI, Cursor, Aider** — auto-detects 
 
 ```bash
 # ClawHub (all platforms)
-npx clawhub install clihub
+npx openclaw skills install clihub
 
 # Or with global ClawHub CLI
 npm i -g clawhub && clawhub install clihub

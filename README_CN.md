@@ -63,7 +63,7 @@ graph LR
 
 ```bash
 # ClawHub（全平台通用）
-npx clawhub install clihub
+npx openclaw skills install clihub
 
 # 或全局安装 ClawHub CLI
 npm i -g clawhub && clawhub install clihub
