@@ -46,12 +46,13 @@ See [references/platforms.md](references/platforms.md) for details.
 
 When the user wants to use a CLI tool, resolve in order:
 
-1. **Is the tool name in the registry?** — `lookup <tool>` first, before anything else.
-   If found, you immediately have its description, subcommands, and usage.
-   If NOT found, the tool might not be installed → tell the user.
-2. **Official Skill** — `$SKILLS_ROOT/<tool>/SKILL.md` exists → use it (authors know best)
-3. **Keyword Search** — `$REGISTRY_ROOT/.keywords.json` → maps task words to tool names
-4. **Live Discovery** — run `<tool> --help` as last resort
+1. **Official Skill** — `$SKILLS_ROOT/<tool>/SKILL.md` exists → use it immediately.
+   The skill author knows their tool best. This ALWAYS takes priority.
+2. **Registry Lookup** — `$REGISTRY_ROOT/<tool>.json` → description, subcommands, usage.
+   If found, this is the source of truth for what the tool does and how to use it.
+3. **Keyword Search** — `$REGISTRY_ROOT/.keywords.json` → maps task words to tool names.
+   Use when the user describes a task without naming a specific tool.
+4. **Live Discovery** — run `<tool> --help` as last resort when nothing is cached.
 
 ## Registry Script
 
@@ -85,16 +86,17 @@ SCRIPT=$(find ~/.agents/skills/cli-hub -name cli-registry.py 2>/dev/null || \
 User: "use jq to extract the name field"
         │
     ┌───▼─────────────────────────────────┐
-    │ 1. Tool mentioned? LOOK IT UP FIRST │
+    │ 1. Official Skill?                  │
+    │    ls $SKILLS_ROOT/jq/SKILL.md      │
+    │    → EXISTS: use it (authoritative)  │
+    ├─────────────────────────────────────┤
+    │ 2. Registry Lookup                  │
     │    lookup jq → description, version, │
     │    commands, keywords, help_raw      │
-    │    → FOUND: you now know what jq is  │
-    │    → NOT FOUND: tell user, suggest   │
-    │      installing or alternatives      │
-    ├─────────────────────────────────────┤
-    │ 2. Official Skill override?         │
-    │    ls $SKILLS_ROOT/jq/SKILL.md      │
-    │    → EXISTS: use official skill      │
+    │    → FOUND: construct command        │
+    │    → NOT FOUND: tool may not exist   │
+    │    ⚠️ NEVER guess what a tool is —   │
+    │    only trust the registry           │
     ├─────────────────────────────────────┤
     │ 3. Keyword Search (no tool named)   │
     │    search "json extract" → jq, yq   │
