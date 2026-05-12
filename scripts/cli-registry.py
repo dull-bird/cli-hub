@@ -528,6 +528,33 @@ def _extract_summary(text):
     return None
 
 
+def _clean_help_raw(text):
+    """Prepare help text for LLM consumption.
+
+    - Strip version/copyright headers
+    - Remove excessive blank lines
+    - Keep first 5000 chars (the useful part is always at the top)
+    """
+    lines = text.split("\n")
+    cleaned = []
+    skip_header = True
+    for line in lines:
+        s = line.strip()
+        # Skip version/copyright noise at the top
+        if skip_header:
+            if any(w in s.lower() for w in ("version", "copyright", "license",
+                   "all rights reserved", "maintainer", "built on", "contributors")):
+                continue
+            if s and len(s) < 80 and not s.startswith("-"):
+                skip_header = False
+        cleaned.append(line)
+    result = "\n".join(cleaned).strip()
+    # Deduplicate blank lines
+    import re as _re
+    result = _re.sub(r'\n{3,}', '\n\n', result)
+    return result[:5000]
+
+
 def _extract_help(binary):
     """Extract structured help: usage, subcommands with options, global options."""
     text = _fetch_help_text(binary)
@@ -536,7 +563,8 @@ def _extract_help(binary):
 
     result = {
         "binary": binary,
-        "help_raw": text[:12288],
+        "help_raw": _clean_help_raw(text),
+        "help_short": text[:2000],
         "usage": _extract_usage(text),
         "summary": _extract_summary(text),
         "subcommands": {},

@@ -87,7 +87,8 @@ User: "extract JSON fields from data.json"
     │    → NOT FOUND → continue       │
     ├─────────────────────────────────┤
     │ 4. Check Registry               │
-    │    lookup jq → binary=jq, has 'filter' subcommand
+    │    lookup jq → binary, description, keywords,
+    │    subcommands, help_raw        │
     │    → FOUND: construct command   │
     ├─────────────────────────────────┤
     │ 5. Live --help (fallback)       │
@@ -95,30 +96,93 @@ User: "extract JSON fields from data.json"
     └─────────────────────────────────┘
 ```
 
+### Reading help_raw (for UNKNOWN tools)
+
+When the tool is NOT in the built-in knowledge base (no human-written description,
+no keywords), you MUST read its `help_raw` field — it's your only source of truth.
+
+**How to parse help_raw efficiently:**
+
+1. **Find the usage line** — usually at the top or marked "Usage:" / "用法:"
+   → Tells you the basic invocation pattern: `tool [OPTIONS] COMMAND [ARGS]`
+
+2. **Scan for COMMAND sections** — look for headings like:
+   - "Commands:", "Subcommands:", "Available commands:"
+   - "Unit Commands:", "Management Commands:"
+   - Single-word lines ending with `:` or `：` followed by indented blocks
+   - Each indented line is typically a command + description
+
+3. **Identify OPTIONS sections** — look for:
+   - Flag-like patterns: `-x`, `--option`, `--option=VALUE`
+   - Lines starting with `-` and followed by a description
+   - Help text often lists all options before any commands
+
+4. **Extract the summary** — the first non-flag, non-usage line over 15 chars
+   is usually the tool's one-line description
+
+5. **Watch for nested commands** — some tools use `cmd subcmd <args>`:
+   - `subscription use <name>` → "use" is a sub-action of "subscription"
+   - `container ls`, `container start` → grouped under "container"
+
+6. **Check description/keywords from registry** — even for unknown tools,
+   `_extract_summary()` may have found a description. The `keywords` field
+   may be empty for unknown tools; fall back to tokenizing the description.
+
+**Example: parsing an unseen tool's help_raw:**
+
+```
+help_raw = """
+xsv 0.13.0
+Usage: xsv <command> [<args>...]
+
+Commands:
+    cat      Concatenate CSV files by rows
+    count    Count records
+    flatten  Flatten conditional nested fields
+    fmt      Reformat CSV data
+    headers  Show headers of CSV data
+    select   Select columns from CSV
+    sort     Sort CSV data
+    ...
+"""
+
+→ Look at "Commands:" heading → find indented blocks
+→ Commands: cat, count, flatten, fmt, headers, select, sort
+→ Each has a description after the name
+→ Construct: xsv select name,age data.csv
+```
+
 ## Typical Workflows
 
-### Known registered tool
+### Known tool (in knowledge base)
 ```
 User: "用 jq 把 name 字段提取出来"
-→ lookup shows binary=jq, has filter command
+→ search "json extract" → jq (built-in desc + keywords)
+→ lookup jq → binary=jq, has 'filter' subcommand
 → Run: jq '.name' input.json
 ```
 
-### Unknown tool (fallback)
+### Unknown tool (NOT in knowledge base — rely on help_raw)
 ```
 User: "用 xsv 处理这个 csv"
-→ No official skill, not in registry
-→ Run: xsv --help → understand subcommands
+→ No official skill, not in KB, not in registry
+→ Run: xsv --help → store as help_raw
+→ READ help_raw (follow "Reading help_raw" guide above):
+   → Usage: xsv <command> [<args>...]
+   → Commands: cat, count, select, sort, headers...
+   → Found "select" subcommand: "Select columns from CSV"
 → Run: xsv select name,age data.csv
 → Register: python3 $SCRIPT register xsv
 ```
 
-### New tool installed
+### Unknown tool (found in registry, but no KB entry)
 ```
-User: "我刚装了 ripgrep"
-→ Run: python3 $SCRIPT discover
-→ rg now in registry
-→ Future queries hit cache instantly
+User: "用 fq 解析这个二进制文件"
+→ search "binary parse" → fq (matched from description tokens)
+→ lookup fq → binary=fq, description="Tool for inspecting binary data"
+→ description came from _extract_summary(), keywords from description tokens
+→ READ help_raw to learn subcommands and options
+→ Construct command from help_raw
 ```
 
 ## Design Principle
