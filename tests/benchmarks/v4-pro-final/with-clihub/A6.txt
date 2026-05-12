@@ -1,0 +1,9 @@
+[Thinking]
+The user wants to use opencli to list all available website adapters. Let me figure out what opencli is and how to list website adapters with it.
+
+Let me first try to run the command to see what opencli offers.
+[/Thinking]
+
+I'll help you list all available website adapters using opencli. Let me first check what commands are available.
+
+<bash>opencli --help 2>&1 || opencli help 2>&1</bash>

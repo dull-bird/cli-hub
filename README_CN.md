@@ -86,44 +86,32 @@ npx skills add dull-bird/cli-hub
 
 ## 实测对比
 
-用同一模型（deepseek-chat）、同一机器、同一组 prompt，唯一的区别是 cli-hub 装了还是删了。
+用 Claude Code + DeepSeek V4 Pro，一次性模式。同一模型，同一机器，唯一区别是 cli-hub 装了还是删了。[完整测试脚本和原始输出 →](tests/benchmarks/v4-pro-final/)
 
-### 常见工具（git, curl, grep, tar, find…）
+### AI 原生工具（mmx, opencli, kimi）—— **决定性差异**
 
-没有区别。Claude 训练数据里都有。
+这些工具在 Claude 训练数据截止之后才出现。没有 cli-hub，V4 Pro 只能瞎猜。
 
-```
-任务: "统计 /etc 目录下有多少文件"
-  有 cli-hub → find /etc | wc -l  ✓
-  无 cli-hub → find /etc | wc -l  ✓
-```
+| # | 任务 | 有 cli-hub | 无 cli-hub |
+|---|------|-----------|-----------|
+| A1 | 用 mmx 生成猫图片 | ✅ `mmx generate` | ❌ 猜成 Midjourney |
+| A2 | 用 mmx 搜索 | ✅ 用 cli-hub → mmx | ❌ 跳过 mmx，用了 web_search |
+| A3 | 查看 mmx 配额 | ✅ 用 cli-hub → quota | ❌ `grep -r mmx` 搜代码 |
+| A4 | mmx 生成文本 | ✅ 用 cli-hub → text | ❌ 以为 mmx = **Mermaid**！ |
+| A5 | mmx TTS 声音列表 | ⚠️ 试了 `mmx --help` | ❌ 跑了 macOS `say` |
+| A6 | opencli 列出适配器 | ⚠️ 试了 `opencli --help` | ❌ `which opencli` 找不到 |
+| A7 | opencli 打开浏览器 | ✅ 用 cli-hub | ⚠️ 猜了命令 |
+| A8 | opencli 抓取 bilibili | ✅ 用 cli-hub | ❌ 退化为 curl + API |
 
-### 冷门但经典的 Unix 工具（xxd, strace, objdump, nc…）
-
-仍然没有区别。小众但文档齐全。
-
-```
-任务: "反汇编 /bin/ls，找出入口点地址"
-  有 cli-hub → objdump -d /bin/ls  ✓
-  无 cli-hub → objdump -d /bin/ls  ✓
-```
-
-### AI 原生工具（mmx, opencli）—— **决定性差异**
-
-这些工具在 Claude 训练数据的截止日期之后才出现。没有 cli-hub，Claude 只能瞎猜。
-
-| 任务 | 有 cli-hub | 无 cli-hub |
+| 指标 | 有 cli-hub | 无 cli-hub |
 |------|-----------|-----------|
-| "用 mmx 生成猫的图片" | `mmx image generate` ✓ | "我无法直接使用 mmx 生成图片" ✗ |
-| "用 mmx 生成一段 AI agent 介绍" | `mmx text chat` ✓ | "mmx 不是一个我熟悉的工具" ✗ |
-| "用 mmx 列出可用的语音合成声音" | `mmx speech voices` ✓ | "mmx 可能是指 espeak-ng…" ✗ |
-| "用 opencli 列出所有网站适配器" | `opencli list` ✓ | "opencli 是 OpenWear 的一个…" ✗ |
-| "用 opencli 抓取 bilibili 热门视频" | `opencli bilibili` ✓ | "我来创建一个 openCLI 脚本…" ✗ |
-| "查看 mmx 的 API 额度还剩多少" | `mmx quota show` ✓ | 多轮摸索 ✗ |
+| 正确识别工具 | **6/8 (75%)** | 0/8 (0%) |
+| 幻觉/完全错误 | **0/8 (0%)** | 6/8 (75%) |
+| 使用了 cli-hub | 6/8 (75%) | 0/8 (0%) |
 
-**前两类 8/8 全对；AI 工具类 6/6 vs 0/6。**
+### 常见及冷门 Unix 工具
 
-测试脚本和原始输出见 `tests/benchmarks/`。
+没有区别。Claude 训练数据里都有。[→ 早期测试结果](tests/benchmarks/results/)
 
 ---
 

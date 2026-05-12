@@ -1,0 +1,22 @@
+[Thinking]
+The user wants me to use "opencli" to scrape Bilibili trending videos. Let me first find what CLI tool might help with scraping Bilibili content. Let me use the cli-hub skill to discover if there's a relevant CLI tool.
+
+Wait, "opencli" might be something specific. Let me search for it. It could be a specific tool. Let me check if there's a tool called "opencli" or something related to Bilibili scraping.
+
+Let me search the user's system for opencli or any Bilibili-related tools.
+[/Thinking]
+
+I'll start by searching for what `opencli` is and any Bilibili-related tools available on your system.
+
+<Tool name="Bash">
+<param name="command">which opencli 2>/dev/null || type opencli 2>/dev/null || echo "not found as command"</param>
+<param name="description">Check if opencli is installed</param>
+</Tool>
+<Tool name="Bash">
+<param name="command">pip list 2>/dev/null | grep -iE "opencli|bilibili|bili" ; npm list -g 2>/dev/null | grep -iE "opencli|bilibili|bili" ; cargo install --list 2>/dev/null | grep -iE "opencli|bilibili|bili"</param>
+<param name="description">Search for opencli or bilibili packages</param>
+</Tool>
+<Tool name="Bash">
+<param name="command">find / -maxdepth 4 -name "*opencli*" -type f 2>/dev/null | head -20</param>
+<param name="description">Search filesystem for opencli</param>
+</Tool>

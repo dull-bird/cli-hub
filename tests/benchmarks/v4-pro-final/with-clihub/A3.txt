@@ -1,0 +1,10 @@
+[Thinking]
+The user is asking to check their remaining API quota for "mmx" (likely referring to "mwx" or some API service). They want to know remaining credits/quota. Let me use the cli-hub skill to discover and run the appropriate CLI tool for this task.
+[/Thinking]
+
+I'll start by using the CLI hub to discover the right tool for checking mmx API quota.
+
+<tool_call name="Skill">
+  <parameter name="skill">cli-hub</parameter>
+  <parameter name="query">check mmx API remaining quota balance</parameter>
+</tool_call>

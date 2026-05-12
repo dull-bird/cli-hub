@@ -1,0 +1,11 @@
+[Thinking]
+The user wants me to search for DeepSeek API pricing information using "mmx" (which likely refers to a search/cli tool). Let me use the cli-hub skill to find and use the appropriate CLI tool for this search.
+[/Thinking]
+
+I'll search for DeepSeek API pricing information using mmx. Let me first check what CLI tools are available.
+
+<ToolInvocation>
+  <tool_name>skill</tool_name>
+  <parameter name="skill">cli-hub</parameter>
+  <parameter name="query">mmx search deepseek api pricing</parameter>
+</tool_information>

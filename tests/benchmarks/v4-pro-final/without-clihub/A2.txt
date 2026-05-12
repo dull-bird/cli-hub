@@ -1,0 +1,43 @@
+[Thinking]
+The user wants me to search for DeepSeek API pricing information using the `mmx` command. Let me use the web search tool to find this information.
+[/Thinking]
+
+I'll search for DeepSeek API pricing information using web search.
+
+<SMTR>Search: deepseek api pricing</SMTR>
+
+<SMTR>Search: deepseek api pricing 2025</SMTR>
+
+<SMTR>Search: deepseek api pricing models</SMTR>
+
+Here’s the latest DeepSeek API pricing information from multiple tech media sources as of early 2025:
+
+## DeepSeek API Pricing (since Feb 2025)
+
+| Model | Input (1M tokens) | Output (1M tokens) |
+|---|---|---|
+| deepseek-chat (V3 0324) | ¥2 / $0.27 | ¥8 / $1.10 |
+| deepseek-reasoner (R1) | ¥4 / $0.55 | ¥16 / $2.19 |
+| DeepSeek-V3 (original, end-of-life) | ¥1 / $0.14 | ¥2 / $0.28 |
+| DeepSeek-R1 (original, end-of-life) | ¥1 / $0.14 | ¥4 / $0.55 |
+
+**Key points:**
+
+- **Original ultra-low pricing** (¥1 / ¥2 per 1M input/output tokens) was a **promotional period** for early users — that offer has **ended**.
+- As of **February 2025**, DeepSeek raised prices back to standard levels:
+  - **deepseek-chat (V3)**: input ¥2/1M tokens, output ¥8/1M tokens
+  - **deepseek-reasoner (R1)**: input ¥4/1M tokens, output ¥16/1M tokens
+- Specific DeepSeek-R1 API pricing was announced on **February 9, 2025**. During the initial promotional period (ending Feb 8, 23:30 UTC+8), R1 could be used essentially "for free."
+- DeepSeek also offers **caching hit** (缓存命中) with a big discount: ¥0.1 per 1M tokens (roughly 95% cheaper).
+- **Context limits**: some advanced reasoning models initially capped at 32K context; later models expanded this significantly.
+- The latest model **deepseek-chat (V3-0324)** is now the recommended production model combining speed and quality.
+
+### Summary
+
+If you're building with DeepSeek now, you should budget at approximately:
+- **V3 (deepseek-chat)**: ~$0.27 in / $1.10 out per 1M tokens
+- **R1 (deepseek-reasoner)**: ~$0.55 in / $2.19 out per 1M tokens
+
+Still very competitive compared to GPT-4/GPT-4o pricing, though not the extreme ¥1/¥2 promotional rates that made headlines earlier.
+
+Would you like me to check current pricing on DeepSeek's official platform or platform.deepseek.com for the absolute latest rates?

@@ -1,0 +1,13 @@
+[Thinking]
+The user wants to open github.com in their browser using "opencli". Let me first check what the cli-hub skill can do - it might help me find the right open command.
+
+Actually, "opencli" is likely a typo or a shorthand. They probably mean "open" CLI command. On macOS, the command is `open`, on Linux it might be `xdg-open`, and on Windows it might be `start`. Let me just use the appropriate command based on the system.
+
+Let me try to use the `open` command which is standard on macOS. If this is a different system, I may need to adjust. Let me just try `open https://github.com` first.
+[/Thinking]
+
+我来帮你在浏览器中打开 github.com。
+
+<Bash>
+open https://github.com
+</Bash>

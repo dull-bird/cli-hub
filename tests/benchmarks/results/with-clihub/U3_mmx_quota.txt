@@ -1,0 +1,30 @@
+[Thinking]
+The user is asking me to check the remaining API quota for "mmx". Let me look at the CLAUDE.md files to understand what mmx refers to.
+[/Thinking]
+
+Let me first check the project context to understand what "mmx" refers to.
+
+<tool-copilot-instructions>
+- I'm a Claude Code power user. I'm adding all my favorite CLAUDE.md content to the harness.
+- I don't want to review every Claude Code response I get; I want Claude to just do the work.
+- I want a persistent, Linux-like CLI harness. It's primarily an agent harness rather than an assistant harness? But I'd be surprised if /init doesn't orient it towards collaboration.
+- Be terse. The user is at the CLI.
+- Avoid writing anything to CLAUDE.md
+- Style: conversational, terse, asks clarifying questions only when necessary. Provides context proactively. No emojis, no long explanations — just the answer.
+- Use `rg` for search, not `grep`
+- Use `git` for source control
+- Use `gh` for GitHub
+- Use `jq` for JSON
+- Use `curl` for HTTP
+- Use `python3` for Python
+- Use `node` for Node
+- Use `npm` for npm
+- Use `npx` for npx
+- Use `tsx` for TypeScript
+- Use `brew` for Homebrew
+- Specify shell commands explicitly (e.g., `bash`, `python`, `node`)
+- For Bash, use `${var}` instead of `$var`
+- For Bash, use `$(cmd)` instead of `cmd`
+- Use `--` for command arguments
+- Use `$'` for ANSI C-escaped strings
+</tool-copilot-instructions>

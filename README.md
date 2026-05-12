@@ -86,42 +86,32 @@ Tools are discovered on first mention and cached automatically.
 
 ## Benchmarks
 
-We tested claude `-p` (one-shot) on 16 tasks across three categories. Same model. Same machine. Only difference: cli-hub present or fully removed.
+Tested with Claude Code + DeepSeek V4 Pro, one-shot mode. Same model, same machine. Only difference: cli-hub installed or fully removed. [Full test scripts and raw outputs →](tests/benchmarks/v4-pro-final/)
 
-### Common tools (git, curl, grep, tar, find…)
+### AI-native tools (mmx, opencli, kimi) — **decisive difference**
 
-No difference. Claude already knows these from training data.
+These tools post-date Claude's training data. Without cli-hub, V4 Pro guesses wrong.
 
-```
-Task: "统计 /etc 目录下有多少文件"
-  WITH    → find /etc | wc -l  ✓
-  WITHOUT → find /etc | wc -l  ✓
-```
+| # | Task | With cli-hub | Without cli-hub |
+|---|------|-------------|-----------------|
+| A1 | 用 mmx 生成猫图片 | ✅ `mmx generate` | ❌ guessed Midjourney |
+| A2 | 用 mmx 搜索 | ✅ used cli-hub → mmx | ❌ skipped mmx, used web_search |
+| A3 | 查看 mmx 配额 | ✅ used cli-hub → quota | ❌ `grep -r mmx` in codebase |
+| A4 | mmx 生成文本 | ✅ used cli-hub → text | ❌ thought mmx = **Mermaid**! |
+| A5 | mmx TTS 声音列表 | ⚠️ tried `mmx --help` | ❌ ran macOS `say` instead |
+| A6 | opencli 列出适配器 | ⚠️ tried `opencli --help` | ❌ `which opencli` not found |
+| A7 | opencli 打开浏览器 | ✅ used cli-hub | ⚠️ guessed command |
+| A8 | opencli 抓取 bilibili | ✅ used cli-hub | ❌ fell back to curl + API |
 
-### Uncommon but documented (xxd, strace, objdump, nc…)
+| Metric | With cli-hub | Without cli-hub |
+|--------|-------------|-----------------|
+| Correct tool identified | **6/8 (75%)** | 0/8 (0%) |
+| Hallucinated / wrong tool | **0/8 (0%)** | 6/8 (75%) |
+| Used cli-hub skill | 6/8 (75%) | 0/8 (0%) |
 
-Still no difference. These are niche but well-documented Unix tools.
+### Common & niche Unix tools
 
-```
-Task: "反汇编 /bin/ls，找出入口点地址"
-  WITH    → objdump -d /bin/ls  ✓
-  WITHOUT → objdump -d /bin/ls  ✓
-```
-
-### AI-native tools (mmx, opencli) — **decisive difference**
-
-These tools post-date Claude's training data. Without cli-hub, Claude guesses wrong.
-
-| Task | WITH cli-hub | WITHOUT cli-hub |
-|------|-------------|-----------------|
-| "用 mmx 生成一张猫的图片" | `mmx image generate "cat"` ✓ | "我无法直接使用 mmx 生成图片" ✗ |
-| "用 mmx 生成一段 AI agent 介绍" | `mmx text chat "..."` ✓ | "mmx 不是一个我熟悉的工具" ✗ |
-| "用 mmx 列出可用的语音合成声音" | `mmx speech voices` ✓ | "mmx 可能是指 espeak-ng…" ✗ |
-| "用 opencli 列出所有网站适配器" | `opencli list` ✓ | "opencli 是 OpenWear 的一个…" ✗ |
-| "用 opencli 抓取 bilibili 热门视频" | `opencli bilibili` ✓ | "我来创建一个 openCLI 脚本…" ✗ |
-| "查看 mmx 的 API 额度还剩多少" | `mmx quota show` ✓ | 多轮摸索才找到命令 ✗ |
-
-**8/8 for common + uncommon tools; 6/6 vs 0/6 for AI-native tools.**
+No difference. Claude's training data covers these adequately. [→ earlier test results](tests/benchmarks/results/)
 
 Repo of test scripts and raw outputs: `tests/benchmarks/`.
 

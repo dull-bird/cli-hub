@@ -1,0 +1,9 @@
+[Thinking]
+The user is asking me to use "opencli" to fetch Bilibili trending/popular videos. Let me first check what opencli is - it seems like it might be a CLI tool. Let me use the cli-hub skill to discover the right CLI tool for this task.
+[/Thinking]
+
+好的！让我先通过 CLI Hub 来找到合适的工具来完成这个任务。
+
+<tool-use name="cli-hub">
+{"query": "用 opencli 抓取 bilibili 热门视频"}
+</tool-use>

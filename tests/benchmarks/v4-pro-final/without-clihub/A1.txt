@@ -1,0 +1,75 @@
+[Thinking]
+The user is asking me to generate an image of a cat using "mmx" and tell them what command to use. "mmx" likely refers to Midjourney, which is commonly abbreviated as MJ or mmx could be a typo for something else.
+
+Wait, looking more carefully - "mmx" might be a reference to something else. It could be:
+- A typo for "mj" (Midjourney)
+- A reference to some other image generation tool
+- mmx could be short for something like MiniMax
+
+Actually, "mmx" might be referring to MiniMax, which is an AI image generation tool. MiniMax has an API and tools for image generation.
+
+Let me check - the user might be referring to a tool called `mmx` or MiniMax's image generation capabilities. MiniMax does have image generation features.
+
+Let me provide guidance based on what "mmx" likely refers to. Since I'm not 100% sure, I should explain what I think they mean and provide the command.
+
+Actually, "mmx" could be:
+1. MiniMax image generation
+2. A codebase named mmx
+
+Since the user said "用 mmx 生成一张猫的图片，告诉我用什么命令" (use mmx to generate a cat picture, tell me what command to use), they're asking for a specific command.
+
+Wait - "mmx" is likely "mmg" mistyped, or it could be a specific tool. Let me think about common image generation tool abbreviations:
+- Midjourney uses `/imagine prompt` in Discord
+- DALL-E uses API/OpenAI
+- Stable Diffusion has various commands
+- Minimax has image generation capabilities
+
+"mmx" seems most likely to be MiniMax's image generation tool. The command for MiniMax would typically be an API call.
+
+Actually, I should just be honest - "mmx" isn't a widely recognized standard command. The user might be referring to:
+1. A specific tool in their environment
+2. A typo for another tool
+3. MiniMax
+
+Let me provide a helpful response covering possibilities and ask for clarification while also providing the most likely answer.
+
+Hmm, but re-reading, perhaps "mmx" is actually a CLI tool they have installed? Or it could be Minimax API usage via CLI.
+
+Let me just provide what I know and be helpful. I'll explain that mmx most likely refers to MiniMax and provide commands for using it via API.
+[/Thinking]
+
+"mmx" 这个缩写不太明确，可能指以下几种：
+
+---
+
+### 1. MiniMax（最可能的）
+如果是 MiniMax 的图生文/文生图，通常通过 API 调用：
+
+```bash
+curl https://api.minimaxi.chat/v1/image_generation \
+  -H "Authorization: Bearer $MINIMAX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "image-01",
+    "prompt": "一只可爱的橘猫坐在窗台上，阳光洒在它身上",
+    "n": 1,
+    "size": "1024x1024"
+  }'
+```
+
+---
+
+### 2. 如果你说的是 **Midjourney (MJ)**
+通过 Discord 使用，命令是：
+```
+/imagine prompt a cute cat sitting on a windowsill, warm sunlight
+```
+
+---
+
+### 3. 如果你指的是某个本地 CLI 工具叫 `mmx`
+可以运行 `which mmx` 或 `mmx --help` 查看用法。
+
+---
+
+你能确认一下 **mmx 具体指哪个工具**吗？这样我能给你准确的命令。

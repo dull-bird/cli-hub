@@ -1,0 +1,13 @@
+[Thinking]
+The user is asking me to list available text-to-speech voices using "mmx". "mmx" is likely a terminal command or tool. Let me help them list the available voices using macOS's `say` command or check what `mmx` might refer to.
+
+On macOS, the `say` command can list voices. But "mmx" might be referring to something specific. Let me first check if `mmx` is a command available on the system, and if not, use the macOS `say` command to list voices.
+
+Actually, "mmx" could be the user referring to "macOS say" or something else. Let me just run commands to list available TTS voices. Since I'm on macOS, I'll use `say -v '?'` to list voices.
+[/Thinking]
+
+我来查看系统中可用的语音合成声音。
+
+<bash>
+say -v '?' 2>/dev/null || espeak --voices 2>/dev/null || spd-say -L 2>/dev/null
+</bash>

@@ -1,0 +1,17 @@
+[Thinking]
+The user wants me to generate a short introduction about AI agents using "mmx". Let me check if mmx is available as a CLI tool or if this might be something else.
+
+mmx could be:
+1. A CLI tool installed on the system
+2. A typo or shorthand for something else
+
+Let me first try to see if mmx is available as a command, or use the cli-hub skill to discover what mmx might be.
+[/Thinking]
+
+<tool_reminder>
+The cli-hub skill is available for managing CLI tools. If mmx is a CLI tool, cli-hub can help discover and run it.
+</tool_reminder>
+
+<invoke name="cli-hub">
+<parameter name="query" string="true">mmx tool for text/content generation - what is mmx and how to use it</parameter>
+</invoke>

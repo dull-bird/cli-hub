@@ -1,0 +1,17 @@
+[Thinking]
+The user wants to use "mmx" to list available text-to-speech voices. Let me check what "mmx" refers to - this could be a command-line tool or an alias. Let me first try to understand what "mmx" is by looking at the context.
+
+I don't have specific knowledge about "mmx" in my context. It might be a CLI tool or alias that the user has configured. Let me try running `which mmx` or `mmx --help` to figure out what it is, or maybe I should just try running the command.
+
+Actually, looking at the available skills, I see "cli-hub: Universal CLI discovery gateway" which could help me figure out what mmx is. But let me first try a direct approach - just run `mmx` related commands to see what happens.
+
+Wait, the user said "用 mmx 列出可用的语音合成声音" which means "use mmx to list available TTS voices". Let me try running mmx with some common help flags first, or just try to run it.
+
+Let me try `mmx --help` first to understand the tool.
+[/Thinking]
+
+Let me first figure out what `mmx` is and how to use it.
+
+<bash>
+mmx --help 2>&1 || which mmx 2>&1 || type mmx 2>&1
+</bash>

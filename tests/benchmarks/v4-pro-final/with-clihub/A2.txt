@@ -1,0 +1,13 @@
+[Thinking]
+The user wants me to search for DeepSeek API pricing information using "mmx". Let me first understand what "mmx" is - I don't have a built-in tool called mmx. Let me check if this is related to the cli-hub skill or some other tool available to me.
+
+Let me think about what mmx could be - it might be a custom CLI tool or something the user expects me to use. Let me try using the cli-hub skill since it's a "Universal CLI discovery gateway" which might help discover what mmx is.
+
+Actually, let me first try running `mmx search` or similar to see if it's available as a command-line tool.
+[/Thinking]
+
+我来帮你用 mmx 搜索 DeepSeek API pricing 相关信息。让我先确认一下 mmx 工具的可用性。
+
+<tool-query name="cli-hub">
+<tool-input>discover mmx</tool-input>
+</tool-query>

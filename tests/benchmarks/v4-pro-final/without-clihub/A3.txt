@@ -1,0 +1,13 @@
+[Thinking]
+The user wants to check their MMX (presumably an API service) remaining quota/credits. Let me help them check this. I need to first understand what "mmx" refers to - it could be a specific API service, or it could be referring to a command-line tool. Let me look around the codebase to find any relevant configuration or scripts.
+
+Let me first check the CLAUDE.md file and any relevant configuration files to understand what MMX is and how to check the API quota.
+[/Thinking]
+
+让我先了解一下 mmx 相关的配置信息。
+<bash>
+find . -name "*.md" -o -name "*.json" -o -name "*.yaml" -o -name "*.yml" -o -name "*.env*" | head -30
+</bash>
+<bash>
+grep -r "mmx" --include="*.md" --include="*.json" --include="*.yaml" --include="*.yml" --include="*.py" --include="*.sh" --include="*.env*" -l 2>/dev/null | head -20
+</bash>

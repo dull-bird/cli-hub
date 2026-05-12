@@ -1,0 +1,18 @@
+[Thinking]
+The user wants me to use `opencli` to list all available website adapters. Let me first figure out what the command is. They likely want to use a CLI tool that's part of some "open" project (like Open WebUI or similar). Let me look at what's available and try to find the right command.
+
+Let me first check if `opencli` is available and try to list adapters.
+[/Thinking]
+
+Looking up the `opencli` command to list all available website adapters...
+
+---
+
+I'll check if `opencli` is available and explore the relevant commands. Since this is a read-only CLI discovery, let me use the cli-hub skill.
+
+I need to just run the command directly. Let me first check if `opencli` exists and what commands are available.
+
+<tool_call name="Bash">
+  <arg>which opencli 2>/dev/null || find / -name "opencli" -type f 2>/dev/null | head -5</arg>
+  <arg>description: Check if opencli exists</arg>
+</tool_call>

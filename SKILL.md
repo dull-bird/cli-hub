@@ -57,13 +57,18 @@ When the user wants to use a CLI tool, resolve in order:
 ## Registry Script
 
 ```bash
-# Auto-detect platform; override with env vars:
-#   CLI_HUB_REGISTRY=~/.my-registry
-#   CLI_HUB_SKILLS=~/.my-skills
+# The registry script is always at scripts/cli-registry.py relative to this SKILL.md.
+# Auto-detect platform root:
 
-SCRIPT=$(find ~/.agents/skills/cli-hub -name cli-registry.py 2>/dev/null || \
-         find ~/.claude/skills/cli-hub -name cli-registry.py 2>/dev/null || \
-         find ~/.cursor/skills/cli-hub -name cli-registry.py 2>/dev/null)
+if [ -d ~/.claude/skills/cli-hub ]; then
+  SCRIPT=~/.claude/skills/cli-hub/scripts/cli-registry.py
+elif [ -d ~/.agents/skills/cli-hub ]; then
+  SCRIPT=~/.agents/skills/cli-hub/scripts/cli-registry.py
+elif [ -d ~/.cursor/skills/cli-hub ]; then
+  SCRIPT=~/.cursor/skills/cli-hub/scripts/cli-registry.py
+else
+  echo "cli-hub not found" >&2 && exit 1
+fi
 ```
 
 ### Commands

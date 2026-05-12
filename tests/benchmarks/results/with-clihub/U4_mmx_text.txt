@@ -1,0 +1,29 @@
+[Thinking]
+The user wants me to generate a brief introduction about AI agents using "mmx". Let me check if there's a CLI tool that matches "mmx" - this could be a CLI tool they want me to use.
+
+Let me first check if there's a CLI tool available via the cli-hub skill.
+
+Wait, "mmx" might refer to a specific tool or command. Let me think about what this could be:
+
+1. It could be a CLI tool they want me to invoke
+2. It could be a shorthand for something
+
+Let me use the cli-hub skill to discover what "mmx" might be, or if it's a known CLI tool.
+
+Actually, "mmx" might refer to Manim (ManimMLX) - Manim is a mathematical animation library. But "mmx" could also be something else entirely.
+
+Let me try the cli-hub to see if there's a "mmx" CLI tool registered.
+
+Actually, wait - the user asked me to "用mmx生成" which could mean "use mmx to generate". This might be an Anthropic CLI or internal tool. Let me check via the cli-hub skill.
+
+Alternatively, "mmx" could be a typo or shorthand for something like "manim" or another tool. Let me use the cli-hub universal CLI discovery gateway to find out.
+
+Let me invoke the cli-hub skill to see if mmx is available.
+[/Thinking]
+
+我来用 cli-hub 查找 mmx 工具。
+
+<tool_call name="skill">
+  <arg name="skill">cli-hub</arg>
+  <arg name="query">mmx</arg>
+</tool_call>

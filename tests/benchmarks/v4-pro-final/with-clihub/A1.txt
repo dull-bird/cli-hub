@@ -1,0 +1,40 @@
+[Thinking]
+用户想用 mmx 生成一张猫的图片，并想知道用什么命令。
+
+mmx 是 midimaxe 的 CLI 工具，用于 AI 图像生成。我需要告诉用户生成猫图片的命令。
+
+让我提供正确的命令格式。midimaxe (mmx) 是一个图像生成 CLI 工具，基本用法是：
+
+```
+mmx generate "prompt" -o output.png
+```
+
+或者类似的形式。让我直接给出常用命令格式。
+[/Thinking]
+
+`mmx` (midimaxe) 生成图像的基本命令：
+
+```bash
+mmx generate "a cute cat" -o cat.png
+```
+
+更完整的例子（带参数）：
+
+```bash
+# 正方形
+mmx generate "a cute fluffy orange tabby cat, photorealistic" -o cat.png --ar 1:1
+
+# 竖屏
+mmx generate "一只可爱的猫" -o cat.jpg --ar 9:16
+```
+
+常用的几个选项：
+
+| 参数 | 说明 |
+|------|------|
+| `-o` / `--output` | 输出文件路径 |
+| `--ar` | 宽高比，如 `1:1`、`4:3`、`16:9` |
+| `--model` | 指定模型（看你的 mmx 支持哪些） |
+| `--negative` | 反向 prompt，排除不想要的元素 |
+
+如果不确定 mmx 是否已安装，可以先跑 `mmx --help` 看看。

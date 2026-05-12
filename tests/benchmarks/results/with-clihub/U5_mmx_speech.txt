@@ -1,0 +1,22 @@
+[Thinking]
+The user is asking me to use "mmx" to list available text-to-speech (voice synthesis) voices. "mmx" is likely referring to macOS's `say` command options, or perhaps the `macos` CLI tool. Let me think about this more carefully.
+
+"mmx" doesn't seem to be a standard macOS command. The user might be referring to:
+1. macOS's `say` command with the `-v ?` flag to list voices
+2. Or they might mean something else entirely
+
+Actually, "mmx" could be a typo or abbreviation. Looking at the CLI hub skill, it might help discover what tools are available. But let me try the most common approach first - the macOS `say -v '?'` command which lists available text-to-speech voices.
+
+Wait, but the user specifically said "用mmx" (use mmx). Let me check if there's a tool called "mmx" or if this is something else. 
+
+Actually, I think "mmx" might be a custom alias or tool. Let me try running `mmx` to see if it exists, or try the macOS `say` command which is the standard way to list voice synthesis voices on macOS.
+
+Let me just try using the `say` command directly since that's the macOS text-to-speech tool, and also check if `mmx` exists as a command.
+[/Thinking]
+
+我来帮你查询可用的语音合成声音。先检查一下 `mmx` 命令是否存在，同时用 macOS 原生的 `say` 命令一并查询。
+
+<bash>
+command -v mmx 2>/dev/null && mmx --help 2>&1 | head -20 || echo "mmx not found"
+say -v '?' 2>&1
+</bash>

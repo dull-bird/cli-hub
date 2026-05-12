@@ -1,0 +1,11 @@
+[Thinking]
+The user wants to open github.com in their browser using `opencli` command. Let me help them with that.
+[/Thinking]
+
+用 `opencli` 命令打开 github.com：
+
+```bash
+opencli https://github.com
+```
+
+这会打开系统默认浏览器并加载 GitHub 首页。

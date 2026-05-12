@@ -1,0 +1,11 @@
+[Thinking]
+The user wants to open github.com in their browser using opencli. Let me help them with that. I'll use the cli-hub skill since opencli is a CLI tool.
+
+Let me first check if opencli is available, and then use it to open github.com.
+[/Thinking]
+
+我来用 opencli 在浏览器打开 github.com：
+
+<tool_usage name="cli-hub">
+<input>opencli open https://github.com</input>
+</tool_usage>
