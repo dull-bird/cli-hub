@@ -4,14 +4,17 @@
 
 ```mermaid
 graph LR
-    CH["🔄 cli-hub<br/>一个 Skill<br/>管理所有 CLI"] --> git["🐙 git<br/>版本控制"]
+    CH["🔄 cli-hub<br/>一个 Skill<br/>管理所有 CLI"] --> git["🔀 git<br/>版本控制"]
     CH --> gh["🐱 gh<br/>GitHub CLI"]
     CH --> opencli["🌐 opencli<br/>浏览器→命令行"]
-    CH --> ffmpeg["🎬 ffmpeg<br/>媒体处理"]
+    CH --> ffmpeg["🎞️ ffmpeg<br/>媒体处理"]
     CH --> python3["🐍 python3<br/>脚本语言"]
     CH --> docker["🐳 docker<br/>容器管理"]
-    CH --> jq["📊 jq<br/>JSON 处理"]
-    CH --> more["...以及 50+ 更多"]
+    CH --> kubectl["☸️ kubectl<br/>Kubernetes"]
+    CH --> jq["🔧 jq<br/>JSON 处理"]
+    CH --> rg["🔍 rg<br/>ripgrep"]
+    CH --> curl["🌍 curl<br/>HTTP 客户端"]
+    CH --> more["📦 ...以及 50+ 更多"]
 
     style CH fill:#4f46e5,color:#fff,stroke:#312e81
     style git fill:#f0fdf4,stroke:#22c55e,color:#166534
@@ -20,7 +23,10 @@ graph LR
     style ffmpeg fill:#f0fdf4,stroke:#22c55e,color:#166534
     style python3 fill:#f0fdf4,stroke:#22c55e,color:#166534
     style docker fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style kubectl fill:#f0fdf4,stroke:#22c55e,color:#166534
     style jq fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style rg fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style curl fill:#f0fdf4,stroke:#22c55e,color:#166534
     style more fill:#fef3c7,stroke:#f59e0b,color:#92400e
 ```
 
@@ -57,13 +63,13 @@ graph LR
 
 ```bash
 # ClawHub（全平台通用）
-npx clawhub install cli-hub
+npx clawhub install clihub
 
 # 或全局安装 ClawHub CLI
-npm i -g clawhub && clawhub install cli-hub
+npm i -g clawhub && clawhub install clihub
 
 # 或通过 OpenClaw
-openclaw skills install cli-hub
+openclaw skills install clihub
 
 # 手动安装
 git clone https://github.com/dull-bird/cli-hub.git ~/.agents/skills/cli-hub

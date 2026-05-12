@@ -1,5 +1,5 @@
 ---
-name: cli-hub
+name: clihub
 description: >
   Universal CLI discovery gateway. Use this skill FIRST whenever the user appears
   to be running, asking about, or interacting with ANY command-line tool.

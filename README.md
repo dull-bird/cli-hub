@@ -4,14 +4,17 @@
 
 ```mermaid
 graph LR
-    CH["🔄 cli-hub<br/>One Skill<br/>All CLIs"] --> git["🐙 git<br/>Version Control"]
+    CH["🔄 cli-hub<br/>One Skill<br/>All CLIs"] --> git["🔀 git<br/>Version Control"]
     CH --> gh["🐱 gh<br/>GitHub CLI"]
     CH --> opencli["🌐 opencli<br/>Browser to CLI"]
-    CH --> ffmpeg["🎬 ffmpeg<br/>Media Processing"]
+    CH --> ffmpeg["🎞️ ffmpeg<br/>Media Processing"]
     CH --> python3["🐍 python3<br/>Scripting"]
     CH --> docker["🐳 docker<br/>Containers"]
-    CH --> jq["📊 jq<br/>JSON Processor"]
-    CH --> more["...and 50+ more"]
+    CH --> kubectl["☸️ kubectl<br/>Kubernetes"]
+    CH --> jq["🔧 jq<br/>JSON Processor"]
+    CH --> rg["🔍 rg<br/>ripgrep"]
+    CH --> curl["🌍 curl<br/>HTTP Client"]
+    CH --> more["📦 ...and 50+ more"]
 
     style CH fill:#4f46e5,color:#fff,stroke:#312e81
     style git fill:#f0fdf4,stroke:#22c55e,color:#166534
@@ -20,7 +23,10 @@ graph LR
     style ffmpeg fill:#f0fdf4,stroke:#22c55e,color:#166534
     style python3 fill:#f0fdf4,stroke:#22c55e,color:#166534
     style docker fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style kubectl fill:#f0fdf4,stroke:#22c55e,color:#166534
     style jq fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style rg fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style curl fill:#f0fdf4,stroke:#22c55e,color:#166534
     style more fill:#fef3c7,stroke:#f59e0b,color:#92400e
 ```
 
@@ -57,13 +63,13 @@ Works with **OpenClaw, Claude Code, Codex CLI, Cursor, Aider** — auto-detects 
 
 ```bash
 # ClawHub (all platforms)
-npx clawhub install cli-hub
+npx clawhub install clihub
 
 # Or with global ClawHub CLI
-npm i -g clawhub && clawhub install cli-hub
+npm i -g clawhub && clawhub install clihub
 
 # Or via OpenClaw
-openclaw skills install cli-hub
+openclaw skills install clihub
 
 # Manual
 git clone https://github.com/dull-bird/cli-hub.git ~/.agents/skills/cli-hub
