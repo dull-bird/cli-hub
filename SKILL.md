@@ -49,10 +49,26 @@ When the user wants to use a CLI tool, resolve in order:
 1. **Official Skill** — `$SKILLS_ROOT/<tool>/SKILL.md` exists → use it immediately.
    The skill author knows their tool best. This ALWAYS takes priority.
 2. **Registry Lookup** — `$REGISTRY_ROOT/<tool>.json` → description, subcommands, usage.
-   If found, this is the source of truth for what the tool does and how to use it.
+   Then check version: if `version` matches installed version, use cached data.
+   If version differs or is `null` (non-standard CLI), refresh via `--help` and re-register.
 3. **Keyword Search** — `$REGISTRY_ROOT/.keywords.json` → maps task words to tool names.
    Use when the user describes a task without naming a specific tool.
 4. **Live Discovery** — run `<tool> --help` as last resort when nothing is cached.
+
+### Version-aware lookup flow
+
+```
+lookup <tool>
+  │
+  ├─ registered + version matches installed → use cached data (fast, structured)
+  │
+  ├─ registered + version differs → --help refresh → register new version
+  │
+  ├─ registered + version is null → --help refresh → mark as "non-standard"
+  │     (re-check with --help on every use)
+  │
+  └─ not registered → --help → register for next time
+```
 
 ## Registry Script
 
