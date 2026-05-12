@@ -44,19 +44,19 @@ Works on 55+ agents: OpenClaw, Claude Code, Cursor, Gemini CLI, Copilot, Windsur
 
 ## Use
 
-After installing, warm up the registry once:
+After installing, warm up the registry by asking your agent:
 
-```bash
-python3 ~/.claude/skills/cli-hub/scripts/cli-registry.py discover
+```
+ 👤  "scan my system and register all CLI tools you can find"
+ 🤖  [cli-hub: discover → registered 37 tools]
+     Done. Found git, docker, curl, python3...
 
-# Or for OpenClaw:
-python3 ~/.agents/skills/cli-hub/scripts/cli-registry.py discover
-
-# Register any extra tools you use:
-python3 ~/.claude/skills/cli-hub/scripts/cli-registry.py register my-tool
+ 👤  "register my-tool so you know how to use it"
+ 🤖  [cli-hub: register my-tool → 5 subcommands, 12 flags]
+     Registered.
 ```
 
-Then just talk to your agent normally:
+Then talk normally:
 
 ```
  👤  "how many uncompleted todos are in data.json?"
@@ -78,9 +78,9 @@ Then just talk to your agent normally:
      ✓ Switched to Japan 1 | SS | ZJ
 ```
 
-Discover is recommended once after install. Without it, tools are still learned on first mention — just slightly slower.
+Tools are discovered on first mention and cached automatically.
 
-> 💡 **Tip:** if you use niche or recently-installed tools, `register` them. This gives the agent their subcommands, flags, and version info immediately, instead of discovering them on the fly.
+> 💡 **Tip:** ask your agent to "register <tool>" for niche or recently-installed tools — it'll learn their subcommands and flags immediately.
 
 ---
 
