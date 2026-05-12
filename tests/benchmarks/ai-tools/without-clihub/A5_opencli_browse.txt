@@ -1,0 +1,42 @@
+我来帮你解决这个问题。你想使用 `opencli` 命令在浏览器中打开 GitHub 网站。
+
+首先，`opencli` 不是标准命令。你可能指的是以下几种情况之一：
+
+## 方案1：使用 `open` 命令（macOS 或 Linux）
+
+**macOS：**
+```bash
+open https://github.com
+```
+
+**Linux 桌面环境：**
+```bash
+xdg-open https://github.com
+```
+
+**WSL (Windows Subsystem for Linux)：**
+```bash
+explorer.exe https://github.com
+```
+
+## 方案2：如果 `opencli` 是你系统中的自定义命令
+
+通常情况下，可以检查一下你系统里是否真的存在这个命令：
+
+```bash
+which opencli 2>/dev/null || type opencli 2>/dev/null
+```
+
+如果没有找到，说明这个命令不存在或未安装。
+
+## 常见替代方案
+
+| 系统 | 命令 |
+|------|------|
+| macOS | `open https://github.com` |
+| Linux (GNOME/KDE) | `xdg-open https://github.com` |
+| Windows | `start https://github.com` |
+
+如果你想在浏览器中打开 GitHub，**最简单的就是直接使用 `open https://github.com`**（macOS）或 `xdg-open https://github.com`（Linux）。
+
+需要我帮你执行打开操作吗？告诉我你用的是哪个操作系统，我可以给出对应的命令。

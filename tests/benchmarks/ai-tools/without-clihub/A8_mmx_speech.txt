@@ -1,0 +1,43 @@
+我需要先澄清一下，您提到的 `mmx` 可能是指 `espeak-ng` 或其他 TTS 引擎？让我先检查一下常见的命令行工具。
+
+我可以帮您列出语音合成声音，但需要知道您具体使用的是哪个 TTS 引擎。常见的选项有：
+
+**1. macOS 系统内置 `say` 命令**
+```bash
+say -v '?'
+```
+
+**2. eSpeak/eSpeak-NG**
+```bash
+espeak-ng --voices
+```
+
+**3. Festival TTS**
+```bash
+festival -b '(voice.list)'
+```
+
+**4. Festival 中文语音支持**
+```bash
+# 列出中文声音
+festival -b '(voice_cmu_us_awb_arctic_hts)'
+```
+
+**5. Microsoft Edge TTS (edge-tts)**
+```bash
+edge-tts --list-voices
+```
+
+**6. Piper TTS**
+```bash
+piper --list-voices
+```
+
+---
+
+如果您确认 `mmx` 是某个具体的 TTS 程序，请告诉我：
+- 您是在什么操作系统上（Windows/macOS/Linux）？
+- 您运行 `mmx` 时提示什么错误或输出？
+- `mmx` 是否是某个 TTS 工具的别名或缩写？
+
+这样我可以给出更准确的命令。

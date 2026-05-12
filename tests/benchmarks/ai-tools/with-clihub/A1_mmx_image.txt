@@ -1,0 +1,31 @@
+我会使用 **MMX (Make My X)** 工具来生成一张猫的图片。以下是命令:
+
+```bash
+mmx "a cute cat"
+```
+
+**更具体的命令示例:**
+
+```bash
+mmx "a cute orange tabby cat sitting on a windowsill, sunlight streaming in, photorealistic, 4k"
+
+# 或指定风格
+mmx "a white fluffy cat, watercolor style, artistic"
+
+# 指定尺寸
+mmx "a black cat with green eyes, ultra realistic, 8k, portrait" --size 1024x1024
+```
+
+**说明:**
+- 默认情况下，MMX 会生成 1 张图片
+- 你可以用 `--count` 指定生成数量
+- 用 `--size` 指定图片尺寸
+- 提示词越详细，效果越好（品种、颜色、姿势、环境、风格等）
+
+**想生成的话，请执行:**
+
+```bash
+mmx "a cute cat"
+```
+
+看看效果！如果喜欢某种风格或需要调整，告诉我，我可以帮你优化提示词。🐱

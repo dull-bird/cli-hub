@@ -1,0 +1,198 @@
+我来帮你创建一个使用opencli抓取Bilibili热门视频的脚本。不过首先需要确认一下，您想使用什么方式？我建议使用Python结合`requests`库来直接调用Bilibili的API，或者您想使用其他的opencli工具？
+
+让我先创建一个Python脚本来抓取Bilibili热门视频：
+
+```python
+#!/usr/bin/env python3
+"""
+Bilibili 热门视频抓取工具
+使用 requests 直接调用 Bilibili API
+"""
+
+import requests
+import json
+import time
+from datetime import datetime
+
+class BilibiliHotVideo:
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://www.bilibili.com/'
+        })
+    
+    def get_hot_videos(self, page=1, page_size=50):
+        """
+        获取Bilibili热门视频
+        API参考: https://api.bilibili.com/x/web-interface/popular
+        """
+        url = "https://api.bilibili.com/x/web-interface/popular"
+        params = {
+            'pn': page,
+            'ps': page_size
+        }
+        
+        try:
+            response = self.session.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            if data['code'] == 0:
+                return data['data']
+            else:
+                print(f"API返回错误: {data['message']}")
+                return None
+                
+        except requests.exceptions.RequestException as e:
+            print(f"请求失败: {e}")
+            return None
+    
+    def parse_video_list(self, data):
+        """解析视频列表"""
+        videos = []
+        
+        if not data or 'list' not in data:
+            return videos
+        
+        for item in data['list']:
+            video = {
+                'id': item.get('aid'),
+                'title': item.get('title'),
+                'description': item.get('desc', ''),
+                'author': item.get('owner', {}).get('name', '未知'),
+                'author_uid': item.get('owner', {}).get('mid', ''),
+                'play_count': item.get('stat', {}).get('view', 0),
+                'danmaku_count': item.get('stat', {}).get('danmaku', 0),
+                'like_count': item.get('stat', {}).get('like', 0),
+                'coin_count': item.get('stat', {}).get('coin', 0),
+                'favorite_count': item.get('stat', {}).get('favorite', 0),
+                'share_count': item.get('stat', {}).get('share', 0),
+                'duration': item.get('duration', 0),
+                'url': f"https://www.bilibili.com/video/av{item.get('aid')}",
+                'pic': item.get('pic', ''),
+                'pubdate': item.get('pubdate', 0),
+                'pubdate_str': datetime.fromtimestamp(item.get('pubdate', 0)).strftime('%Y-%m-%d %H:%M:%S') if item.get('pubdate') else '未知'
+            }
+            videos.append(video)
+        
+        return videos
+    
+    def display_videos(self, videos, page=1):
+        """显示视频列表"""
+        if not videos:
+            print("没有获取到视频数据")
+            return
+        
+        print(f"\n{'='*80}")
+        print(f"🔥 Bilibili 热门视频 - 第{page}页")
+        print(f"📅 抓取时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"{'='*80}\n")
+        
+        for idx, video in enumerate(videos, 1):
+            print(f"{'─'*80}")
+            print(f"  {idx:2d}. {video['title']}")
+            print(f"      👤 作者: {video['author']}  |  📊 播放: {self._format_number(video['play_count'])}")
+            print(f"      💬 弹幕: {self._format_number(video['danmaku_count'])}  |  👍 点赞: {self._format_number(video['like_count'])}")
+            print(f"      🪙 硬币: {self._format_number(video['coin_count'])}  |  ⭐ 收藏: {self._format_number(video['favorite_count'])}")
+            print(f"      🔗 链接: {video['url']}")
+            print(f"      🕐 发布时间: {video['pubdate_str']}")
+            
+            if video['description']:
+                desc = video['description'][:100] + '...' if len(video['description']) > 100 else video['description']
+                print(f"      📝 简介: {desc}")
+    
+    def _format_number(self, num):
+        """格式化数字显示"""
+        if num >= 100000000:
+            return f"{num/100000000:.1f}亿"
+        elif num >= 10000:
+            return f"{num/10000:.1f}万"
+        else:
+            return str(num)
+    
+    def export_to_json(self, videos, filename="bilibili_hot.json"):
+        """导出到JSON文件"""
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(videos, f, ensure_ascii=False, indent=2)
+        print(f"\n✅ 数据已导出到: {filename}")
+
+    def export_to_markdown(self, videos, filename="bilibili_hot.md"):
+        """导出到Markdown表格"""
+        if not videos:
+            return
+        
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(f"# Bilibili 热门视频\n\n")
+            f.write(f"抓取时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            f.write("| 排名 | 标题 | 作者 | 播放量 | 弹幕 | 点赞 |\n")
+            f.write("|------|------|------|--------|------|------|\n")
+            
+            for idx, video in enumerate(videos, 1):
+                title = video['title'].replace('|', '\\|')[:30]
+                f.write(f"| {idx} | {title} | {video['author']} | {self._format_number(video['play_count'])} | {self._format_number(video['danmaku_count'])} | {self._format_number(video['like_count'])} |\n")
+        
+        print(f"\n✅ 数据已导出到: {filename}")
+
+
+def main():
+    """主函数"""
+    bili = BilibiliHotVideo()
+    
+    print("🎬 Bilibili 热门视频抓取工具")
+    print("=" * 40)
+    
+    # 获取热门视频
+    print("\n⏳ 正在获取热门视频...")
+    data = bili.get_hot_videos(page=1, page_size=10)
+    
+    if data:
+        videos = bili.parse_video_list(data)
+        bili.display_videos(videos, page=1)
+        
+        # 导出数据
+        bili.export_to_json(videos)
+        bili.export_to_markdown(videos)
+    else:
+        print("❌ 获取数据失败")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+## 使用方法
+
+1. **安装依赖**：
+```bash
+pip install requests
+```
+
+2. **运行脚本**：
+```bash
+python bilibili_hot.py
+```
+
+3. **在代码中使用**：
+```python
+from bilibili_hot import BilibiliHotVideo
+
+bili = BilibiliHotVideo()
+data = bili.get_hot_videos(page=1, page_size=20)
+videos = bili.parse_video_list(data)
+
+# 遍历视频
+for video in videos:
+    print(video['title'], video['play_count'])
+```
+
+## 功能特点
+
+- ✅ 抓取Bilibili热门视频列表
+- ✅ 显示播放量、弹幕、点赞等数据
+- ✅ 格式化数字显示（万/亿）
+- ✅ 导出为JSON格式
+- ✅ 导出为Markdown表格
+- ✅ 支持分页查询
+
+如果您想要使用其他的opencli工具或者有其他需求，请告诉我，我可以帮您调整方案！

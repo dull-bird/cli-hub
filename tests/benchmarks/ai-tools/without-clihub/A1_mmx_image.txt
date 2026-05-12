@@ -1,0 +1,32 @@
+我无法直接使用 mmx 生成图片，但我可以告诉您相关的命令。
+
+**mmx (Modular Neural Graphics)** 是一个基于神经网络的图像生成工具。如果您已经安装了 mmx，通常生成猫图片的命令是：
+
+```bash
+mmx generate "a cute cat, photorealistic" --output cat.png
+```
+
+或者使用更具体的变体：
+
+```bash
+mmx generate "a fluffy orange tabby cat sitting on a windowsill, soft lighting, high detail" --output cat.jpg
+```
+
+**常见参数：**
+- `--model` 或 `-m`：指定模型（如 `--model sd-xl`）
+- `--steps`：采样步数（默认 50）
+- `--seed`：随机种子（用于复现）
+- `--cfg`：CFG 尺度（默认 7.5）
+- `--size`：输出尺寸（如 `--size 512x512`）
+
+**如果 mmx 未安装：**
+1. 使用 pip 安装：
+```bash
+pip install mmx
+```
+
+2. 或者直接使用其他工具生成，如：
+   - **Stable Diffusion**: `python scripts/txt2img.py --prompt "a cat"`
+   - **DALL·E / Midjourney**: 通过 API 或 Web 界面
+
+您是在哪个环境下使用 mmx？或者您想让我生成猫图片的代码？

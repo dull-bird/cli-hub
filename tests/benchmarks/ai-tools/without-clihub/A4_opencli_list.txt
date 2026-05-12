@@ -1,0 +1,29 @@
+我来帮你列出所有可用的网站适配器。`opencli` 是 OpenWear 的一个命令行工具，用于管理网站适配器。
+
+运行以下命令列出所有可用的适配器：
+
+```bash
+opencli adapters list
+```
+
+或者使用更简洁的命令：
+
+```bash
+opencli adapters ls
+```
+
+如果你想查看更多详细信息（如版本、状态等），可以使用：
+
+```bash
+opencli adapters list --all
+```
+
+或者查看详细输出：
+
+```bash
+opencli adapters list -v
+```
+
+**注意：** 上述命令基于 `opencli` 的标准用法。如果你的 `opencli` 版本不同或有特殊参数，可能略有差异。你可以先用 `opencli --help` 或 `opencli adapters --help` 查看具体帮助信息。
+
+如果这些命令不起作用，请提供你的 `opencli` 版本信息，我可以给出更准确的命令。

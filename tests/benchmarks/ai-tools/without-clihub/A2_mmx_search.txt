@@ -1,0 +1,8 @@
+我来帮你搜索 DeepSeek API 的定价信息。我将使用 mmx 工具进行搜索。
+
+<｜｜DSML｜｜tool_calls>
+<｜｜DSML｜｜invoke name="bash">
+<｜｜DSML｜｜parameter name="command" string="true">mmx "DeepSeek API pricing 2025 2026" 2>/dev/null || mmx "DeepSeek API pricing" 2>/dev/null || echo "mmx not available, trying alternative"</｜｜DSML｜｜parameter>
+<｜｜DSML｜｜parameter name="timeout" string="false">15000</｜｜DSML｜｜parameter>
+</｜｜DSML｜｜invoke>
+</｜｜DSML｜｜tool_calls>

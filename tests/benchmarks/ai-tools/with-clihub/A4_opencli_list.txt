@@ -1,0 +1,7 @@
+我来使用 opencli 列出所有可用的网站适配器。
+
+<｜｜DSML｜｜tool_calls>
+<｜｜DSML｜｜invoke name="opencli_command">
+<｜｜DSML｜｜parameter name="command" string="true">list-adapters</｜｜DSML｜｜parameter>
+</｜｜DSML｜｜invoke>
+</｜｜DSML｜｜tool_calls>

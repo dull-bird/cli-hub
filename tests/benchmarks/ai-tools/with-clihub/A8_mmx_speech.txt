@@ -1,0 +1,29 @@
+您可以使用 `mmx` 工具的 `voices` 命令来列出可用的语音合成声音。具体命令如下：
+
+```bash
+mmx voices
+```
+
+这个命令会列出所有可用的语音合成（text-to-speech）声音选项。如果您需要查看特定语言或地区的声音，可以使用筛选选项：
+
+```bash
+mmx voices --language zh-CN
+```
+
+或者查看特定类别的声音：
+
+```bash
+mmx voices --kind standard
+mmx voices --kind neural
+```
+
+**常用选项：**
+- `--language` 或 `-l`：按语言代码筛选（如 `en-US`, `zh-CN`, `ja-JP`）
+- `--kind` 或 `-k`：按声音类型筛选（`standard` 标准声音，`neural` 神经声音）
+- `--gender` 或 `-g`：按性别筛选（`male`, `female`）
+
+如果您想了解更详细的用法，可以查看帮助：
+
+```bash
+mmx voices --help
+```

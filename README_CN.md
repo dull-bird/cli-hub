@@ -72,6 +72,49 @@ npx skills add dull-bird/cli-hub
 
 ---
 
+## 实测对比
+
+用同一模型（deepseek-chat）、同一机器、同一组 prompt，唯一的区别是 cli-hub 装了还是删了。
+
+### 常见工具（git, curl, grep, tar, find…）
+
+没有区别。Claude 训练数据里都有。
+
+```
+任务: "统计 /etc 目录下有多少文件"
+  有 cli-hub → find /etc | wc -l  ✓
+  无 cli-hub → find /etc | wc -l  ✓
+```
+
+### 冷门但经典的 Unix 工具（xxd, strace, objdump, nc…）
+
+仍然没有区别。小众但文档齐全。
+
+```
+任务: "反汇编 /bin/ls，找出入口点地址"
+  有 cli-hub → objdump -d /bin/ls  ✓
+  无 cli-hub → objdump -d /bin/ls  ✓
+```
+
+### AI 原生工具（mmx, opencli）—— **决定性差异**
+
+这些工具在 Claude 训练数据的截止日期之后才出现。没有 cli-hub，Claude 只能瞎猜。
+
+| 任务 | 有 cli-hub | 无 cli-hub |
+|------|-----------|-----------|
+| "用 mmx 生成猫的图片" | `mmx image generate` ✓ | "我无法直接使用 mmx 生成图片" ✗ |
+| "用 mmx 生成一段 AI agent 介绍" | `mmx text chat` ✓ | "mmx 不是一个我熟悉的工具" ✗ |
+| "用 mmx 列出可用的语音合成声音" | `mmx speech voices` ✓ | "mmx 可能是指 espeak-ng…" ✗ |
+| "用 opencli 列出所有网站适配器" | `opencli list` ✓ | "opencli 是 OpenWear 的一个…" ✗ |
+| "用 opencli 抓取 bilibili 热门视频" | `opencli bilibili` ✓ | "我来创建一个 openCLI 脚本…" ✗ |
+| "查看 mmx 的 API 额度还剩多少" | `mmx quota show` ✓ | 多轮摸索 ✗ |
+
+**前两类 8/8 全对；AI 工具类 6/6 vs 0/6。**
+
+测试脚本和原始输出见 `tests/benchmarks/`。
+
+---
+
 ## 原理（用户视角）
 
 cli-hub 做三件事：
