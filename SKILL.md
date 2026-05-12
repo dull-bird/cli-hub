@@ -1,12 +1,7 @@
 ---
 name: clihub
-description: >
-  Universal CLI discovery gateway. Use this skill FIRST whenever the user appears
-  to be running, asking about, or interacting with ANY command-line tool.
-  Trigger patterns: "run <cmd>", "execute <cmd>", "用 <cmd>",
-  "帮我 <run/look/check/do>", "怎么用 <tool>", any backtick-wrapped
-  command, any line that looks like a shell command with flags/arguments.
-  When triggered, resolve the tool via: official skill → registry → --help.
+description: Universal CLI discovery gateway — one skill to manage all CLI tools
+tags: [cli, agent, tool, discovery]
 ---
 
 # CLI Hub
@@ -41,11 +36,12 @@ See [references/platforms.md](references/platforms.md) for details.
 
 ## Priority Resolution
 
-When the user wants to use a CLI tool:
+When the user wants to use a CLI tool, resolve in order:
 
 1. **Official Skill** — `$SKILLS_ROOT/<tool>/SKILL.md` exists → use it
-2. **Registry** — `$REGISTRY_ROOT/<tool>.json` → cached help + subcommands
-3. **Live Discovery** — run `<tool> --help` and parse on the fly
+2. **Registry** — `$REGISTRY_ROOT/<tool>.json` → cached help, subcommands, keywords
+3. **Keyword Search** — `$REGISTRY_ROOT/.keywords.json` → maps task words to tool names
+4. **Live Discovery** — run `<tool> --help` and parse on the fly
 
 ## Registry Script
 
@@ -65,25 +61,38 @@ SCRIPT=$(find ~/.agents/skills/cli-hub -name cli-registry.py 2>/dev/null || \
 |---------|-----|
 | `python3 $SCRIPT register <cli> [--binary <bin>] [--desc <text>]` | Register a CLI tool |
 | `python3 $SCRIPT list [--format json]` | List all registered tools |
-| `python3 $SCRIPT lookup <cli>` | Show structured info (subcommands, flags, help) |
+| `python3 $SCRIPT lookup <cli>` | Show structured info (desc, subcommands, flags, keywords, help) |
+| `python3 $SCRIPT search <keyword...>` | Find tools by task keywords (e.g. "json filter") |
 | `python3 $SCRIPT discover` | Auto-scan system for known binaries |
+| `python3 $SCRIPT remove <cli>` | Remove from registry |
+| `python3 $SCRIPT help <cli>` | Fetch live `--help` output |
 | `python3 $SCRIPT remove <cli>` | Remove from registry |
 | `python3 $SCRIPT help <cli>` | Live `--help` dump (registered or not) |
 
 ### Decision Tree
 
 ```
-1. ls $SKILLS_ROOT/<tool>/SKILL.md
-   → EXISTS: read and follow that skill (it's authoritative)
-   → NOT FOUND: continue
-
-2. python3 $SCRIPT lookup <tool>
-   → FOUND: see subcommands, flags, raw help → construct the command
-   → NOT FOUND: continue
-
-3. Run: <tool> --help
-   → Parse the output to understand usage
-   → Register if useful: python3 $SCRIPT register <tool>
+User: "extract JSON fields from data.json"
+        │
+    ┌───▼─────────────────────────────┐
+    │ 1. Explicit tool mentioned?     │
+    │    "use jq to..." → skip to step 4
+    ├─────────────────────────────────┤
+    │ 2. Keyword Search               │
+    │    search "json extract" → jq (2 hits), yq (1 hit)
+    │    → jq is best match
+    ├─────────────────────────────────┤
+    │ 3. Check Official Skill         │
+    │    ls $SKILLS_ROOT/jq/SKILL.md  │
+    │    → NOT FOUND → continue       │
+    ├─────────────────────────────────┤
+    │ 4. Check Registry               │
+    │    lookup jq → binary=jq, has 'filter' subcommand
+    │    → FOUND: construct command   │
+    ├─────────────────────────────────┤
+    │ 5. Live --help (fallback)       │
+    │    Only if registry not found   │
+    └─────────────────────────────────┘
 ```
 
 ## Typical Workflows

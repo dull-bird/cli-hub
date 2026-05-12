@@ -11,6 +11,7 @@ Usage:
     python3 cli-registry.py discover [--scan-path <dir>]
     python3 cli-registry.py remove <name>
     python3 cli-registry.py help <name>
+    python3 cli-registry.py search <keyword...>
     python3 cli-registry.py --version
 """
 
@@ -23,21 +24,348 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 REGISTRY_DIR = Path.home() / ".openclaw" / "cli-registry"
 SKILLS_DIR = Path.home() / ".agents" / "skills"
+KEYWORD_INDEX_PATH = REGISTRY_DIR / ".keywords.json"
 
-KNOWN_CLIS = [
-    "jq", "yq", "fzf", "rg", "fd", "bat", "eza", "gh", "docker",
-    "kubectl", "helm", "terraform", "aws", "gcloud", "az",
-    "python3", "node", "npm", "pnpm", "yarn", "bun",
-    "cargo", "go", "rustc", "make", "cmake", "gcc", "g++",
-    "curl", "wget", "ffmpeg", "convert", "sqlite3", "psql",
-    "mihomo", "mmx", "opencli", "code", "git", "htop", "ncdu",
-    "ssh", "scp", "rsync", "tar", "gzip", "unzip", "zip",
-    "sed", "awk", "grep", "find", "xargs", "wc", "sort", "uniq",
-    "systemctl", "journalctl", "ss", "ip", "ping", "dig",
-]
+# ── P0: Knowledge base ──────────────────────────────────────────
+# Built-in descriptions, keywords, and categories.
+# Priority: built-in desc > --help summary > "External CLI: <name>"
+
+KNOWN_CLI_KB = {
+    # ── data processing ──
+    "jq": {
+        "desc": "Lightweight command-line JSON processor — filter, transform, and query JSON data",
+        "keywords": ["json", "filter", "transform", "query", "parse", "extract", "select", "map", "reduce"],
+        "category": "data-processing",
+    },
+    "yq": {
+        "desc": "YAML/JSON/XML processor — jq wrapper for YAML with similar syntax",
+        "keywords": ["yaml", "json", "xml", "filter", "transform", "query", "parse", "convert"],
+        "category": "data-processing",
+    },
+    "sed": {
+        "desc": "Stream editor for filtering and transforming text",
+        "keywords": ["text", "filter", "replace", "substitute", "transform", "stream", "edit"],
+        "category": "text-processing",
+    },
+    "awk": {
+        "desc": "Pattern scanning and text processing language",
+        "keywords": ["text", "pattern", "scan", "column", "field", "parse", "report", "transform"],
+        "category": "text-processing",
+    },
+    "grep": {
+        "desc": "Print lines matching a pattern — search text with regex",
+        "keywords": ["search", "text", "regex", "pattern", "match", "find", "grep", "filter"],
+        "category": "text-processing",
+    },
+    "rg": {
+        "desc": "ripgrep — recursively search directories for regex patterns (fast grep alternative)",
+        "keywords": ["search", "text", "regex", "pattern", "match", "find", "grep", "ripgrep", "recursive"],
+        "category": "text-processing",
+    },
+    "fd": {
+        "desc": "Simple, fast file search — find entries in the filesystem (find alternative)",
+        "keywords": ["search", "file", "find", "locate", "filesystem", "directory"],
+        "category": "file-management",
+    },
+    "find": {
+        "desc": "Search for files in a directory hierarchy",
+        "keywords": ["search", "file", "find", "locate", "filesystem", "directory", "recursive"],
+        "category": "file-management",
+    },
+    "xargs": {
+        "desc": "Build and execute command lines from standard input",
+        "keywords": ["pipe", "batch", "execute", "argument", "stdin", "parallel"],
+        "category": "text-processing",
+    },
+    "wc": {
+        "desc": "Print newline, word, and byte counts for each file",
+        "keywords": ["count", "lines", "words", "bytes", "file", "statistics"],
+        "category": "text-processing",
+    },
+    "sort": {
+        "desc": "Sort lines of text files",
+        "keywords": ["sort", "order", "lines", "text", "alphabetical", "numeric"],
+        "category": "text-processing",
+    },
+    "uniq": {
+        "desc": "Report or omit repeated lines",
+        "keywords": ["unique", "duplicate", "lines", "text", "count", "filter"],
+        "category": "text-processing",
+    },
+    "cut": {
+        "desc": "Remove sections from each line of files — extract columns",
+        "keywords": ["columns", "fields", "delimiter", "extract", "text", "csv"],
+        "category": "text-processing",
+    },
+
+    # ── version control ──
+    "git": {
+        "desc": "Fast, scalable, distributed revision control system",
+        "keywords": ["version", "control", "commit", "branch", "merge", "clone", "push", "pull", "diff"],
+        "category": "version-control",
+    },
+    "gh": {
+        "desc": "GitHub CLI — manage repositories, PRs, issues from the terminal",
+        "keywords": ["github", "pr", "pull request", "issue", "repo", "repository", "release", "gist", "codespace"],
+        "category": "version-control",
+    },
+
+    # ── containers ──
+    "docker": {
+        "desc": "Container platform — build, run, and manage containers",
+        "keywords": ["container", "image", "docker", "build", "run", "compose", "deploy", "registry"],
+        "category": "containers",
+    },
+    "kubectl": {
+        "desc": "Kubernetes CLI — deploy and manage containerized applications on clusters",
+        "keywords": ["kubernetes", "k8s", "cluster", "deploy", "pod", "service", "container", "orchestration"],
+        "category": "containers",
+    },
+    "helm": {
+        "desc": "Kubernetes package manager — install and manage Helm charts",
+        "keywords": ["kubernetes", "k8s", "chart", "package", "deploy", "install", "template"],
+        "category": "containers",
+    },
+
+    # ── networking ──
+    "curl": {
+        "desc": "Transfer data from or to a server — HTTP/HTTPS/FTP/Gopher client",
+        "keywords": ["http", "https", "download", "api", "request", "rest", "web", "url", "ftp", "post", "get"],
+        "category": "networking",
+    },
+    "wget": {
+        "desc": "Non-interactive network downloader — retrieve files via HTTP/HTTPS/FTP",
+        "keywords": ["download", "http", "https", "ftp", "mirror", "recursive", "web", "file"],
+        "category": "networking",
+    },
+    "ssh": {
+        "desc": "OpenSSH remote login client — securely connect to remote machines",
+        "keywords": ["ssh", "remote", "login", "shell", "secure", "tunnel", "connect", "key"],
+        "category": "networking",
+    },
+    "scp": {
+        "desc": "Secure copy — transfer files between hosts over SSH",
+        "keywords": ["copy", "transfer", "remote", "secure", "file", "ssh"],
+        "category": "networking",
+    },
+    "rsync": {
+        "desc": "Fast, versatile file copying tool — sync directories locally and remotely",
+        "keywords": ["sync", "copy", "backup", "mirror", "transfer", "remote", "incremental"],
+        "category": "networking",
+    },
+    "ping": {
+        "desc": "Send ICMP ECHO_REQUEST to test network connectivity",
+        "keywords": ["network", "connectivity", "latency", "test", "ping", "icmp"],
+        "category": "networking",
+    },
+    "dig": {
+        "desc": "DNS lookup utility — query DNS name servers",
+        "keywords": ["dns", "domain", "lookup", "query", "nameserver", "resolve", "record"],
+        "category": "networking",
+    },
+    "ss": {
+        "desc": "Socket statistics — dump socket information (netstat replacement)",
+        "keywords": ["socket", "network", "port", "connection", "tcp", "udp", "listen"],
+        "category": "networking",
+    },
+    "ip": {
+        "desc": "Show/manipulate routing, devices, policy routing, and tunnels",
+        "keywords": ["network", "route", "interface", "address", "tunnel", "link", "ip"],
+        "category": "networking",
+    },
+
+    # ── media ──
+    "ffmpeg": {
+        "desc": "Complete solution for recording, converting, and streaming audio/video",
+        "keywords": ["video", "audio", "convert", "encode", "decode", "media", "stream", "compress", "transcode"],
+        "category": "media",
+    },
+    "convert": {
+        "desc": "ImageMagick — convert between image formats, resize, apply effects",
+        "keywords": ["image", "convert", "resize", "format", "png", "jpg", "gif", "crop", "rotate"],
+        "category": "media",
+    },
+
+    # ── languages / runtimes ──
+    "python3": {
+        "desc": "Python 3 interpreter and scripting language",
+        "keywords": ["python", "script", "programming", "language", "interpreter", "run"],
+        "category": "languages",
+    },
+    "node": {
+        "desc": "Node.js JavaScript runtime — run JavaScript outside the browser",
+        "keywords": ["javascript", "js", "node", "runtime", "server", "script", "npm"],
+        "category": "languages",
+    },
+    "npm": {
+        "desc": "Node.js package manager — install and manage JavaScript packages",
+        "keywords": ["package", "install", "node", "javascript", "dependency", "module", "registry"],
+        "category": "languages",
+    },
+    "pnpm": {
+        "desc": "Fast, disk-space efficient package manager for Node.js",
+        "keywords": ["package", "install", "node", "javascript", "dependency", "fast"],
+        "category": "languages",
+    },
+    "yarn": {
+        "desc": "Fast, reliable, and secure dependency management for JavaScript",
+        "keywords": ["package", "install", "node", "javascript", "dependency", "yarn"],
+        "category": "languages",
+    },
+    "bun": {
+        "desc": "All-in-one JavaScript runtime — bundler, test runner, package manager",
+        "keywords": ["javascript", "runtime", "bundler", "test", "package", "fast"],
+        "category": "languages",
+    },
+    "cargo": {
+        "desc": "Rust package manager and build tool",
+        "keywords": ["rust", "package", "build", "compile", "dependency", "project"],
+        "category": "languages",
+    },
+    "go": {
+        "desc": "Go programming language — compile, build, and run Go programs",
+        "keywords": ["go", "golang", "compile", "build", "run", "format", "module"],
+        "category": "languages",
+    },
+    "rustc": {
+        "desc": "Rust compiler — compile Rust source code",
+        "keywords": ["rust", "compile", "build", "language", "binary"],
+        "category": "languages",
+    },
+    "make": {
+        "desc": "GNU make — build automation tool",
+        "keywords": ["build", "compile", "automation", "makefile", "target", "dependency"],
+        "category": "build",
+    },
+    "cmake": {
+        "desc": "Cross-platform build system generator",
+        "keywords": ["build", "compile", "cmake", "makefile", "project", "configure"],
+        "category": "build",
+    },
+    "gcc": {
+        "desc": "GNU C compiler — compile C programs",
+        "keywords": ["c", "compile", "build", "gcc", "linker", "binary"],
+        "category": "build",
+    },
+
+    # ── databases ──
+    "sqlite3": {
+        "desc": "SQLite CLI — manage SQLite databases from the command line",
+        "keywords": ["sql", "database", "sqlite", "query", "table", "select", "insert", "db"],
+        "category": "databases",
+    },
+    "psql": {
+        "desc": "PostgreSQL interactive terminal — query and manage PostgreSQL databases",
+        "keywords": ["sql", "database", "postgresql", "postgres", "query", "table", "select", "psql"],
+        "category": "databases",
+    },
+
+    # ── cloud ──
+    "aws": {
+        "desc": "AWS CLI — manage Amazon Web Services from the command line",
+        "keywords": ["aws", "amazon", "cloud", "s3", "ec2", "lambda", "iam", "deploy"],
+        "category": "cloud",
+    },
+    "gcloud": {
+        "desc": "Google Cloud CLI — manage Google Cloud Platform resources",
+        "keywords": ["google", "cloud", "gcp", "compute", "storage", "deploy", "iam"],
+        "category": "cloud",
+    },
+    "az": {
+        "desc": "Azure CLI — manage Microsoft Azure resources",
+        "keywords": ["azure", "microsoft", "cloud", "vm", "storage", "deploy", "resource"],
+        "category": "cloud",
+    },
+    "terraform": {
+        "desc": "Infrastructure as Code — define and provision cloud infrastructure",
+        "keywords": ["infrastructure", "iac", "cloud", "provision", "deploy", "state", "plan", "apply"],
+        "category": "cloud",
+    },
+
+    # ── system ──
+    "systemctl": {
+        "desc": "Control the systemd system and service manager",
+        "keywords": ["systemd", "service", "daemon", "start", "stop", "restart", "status", "enable"],
+        "category": "system",
+    },
+    "journalctl": {
+        "desc": "Query the systemd journal — view and filter logs",
+        "keywords": ["log", "journal", "systemd", "debug", "error", "service", "boot"],
+        "category": "system",
+    },
+    "htop": {
+        "desc": "Interactive process viewer — monitor system resources",
+        "keywords": ["process", "cpu", "memory", "monitor", "system", "resource", "interactive"],
+        "category": "system",
+    },
+    "ncdu": {
+        "desc": "NCurses Disk Usage — interactive disk usage analyzer",
+        "keywords": ["disk", "usage", "space", "file", "directory", "size", "interactive"],
+        "category": "system",
+    },
+
+    # ── compression / archive ──
+    "tar": {
+        "desc": "Tape archiver — create and extract archive files",
+        "keywords": ["archive", "compress", "extract", "tar", "gz", "backup", "bundle"],
+        "category": "archives",
+    },
+    "gzip": {
+        "desc": "Compress or decompress files using Lempel-Ziv coding",
+        "keywords": ["compress", "decompress", "gz", "file", "zip"],
+        "category": "archives",
+    },
+    "unzip": {
+        "desc": "List, test, and extract compressed files in a ZIP archive",
+        "keywords": ["unzip", "extract", "archive", "zip", "decompress"],
+        "category": "archives",
+    },
+    "zip": {
+        "desc": "Package and compress files into a ZIP archive",
+        "keywords": ["zip", "compress", "archive", "package", "bundle"],
+        "category": "archives",
+    },
+
+    # ── other tools ──
+    "fzf": {
+        "desc": "Command-line fuzzy finder — filter lists interactively",
+        "keywords": ["fuzzy", "find", "filter", "interactive", "search", "select", "picker", "menu"],
+        "category": "interactive",
+    },
+    "bat": {
+        "desc": "cat clone with syntax highlighting and Git integration",
+        "keywords": ["view", "cat", "syntax", "highlight", "file", "preview", "pager"],
+        "category": "file-management",
+    },
+    "eza": {
+        "desc": "Modern replacement for ls — list files with colors and icons",
+        "keywords": ["list", "directory", "file", "ls", "tree", "color"],
+        "category": "file-management",
+    },
+    "opencli": {
+        "desc": "OpenClaw CLI — manage the OpenClaw AI agent gateway",
+        "keywords": ["openclaw", "agent", "ai", "gateway", "skill", "plugin"],
+        "category": "ai-tools",
+    },
+    "code": {
+        "desc": "Visual Studio Code editor — open files, folders, and manage extensions",
+        "keywords": ["editor", "code", "vscode", "ide", "file", "diff", "extension"],
+        "category": "editors",
+    },
+    "mihomo": {
+        "desc": "Clash meta kernel — proxy and network routing (official skill exists)",
+        "keywords": ["proxy", "mihomo", "clash", "vpn", "node", "routing", "network", "switch"],
+        "category": "networking",
+    },
+    "mmx": {
+        "desc": "MiniMax multimodal AI toolkit — generate images, video, music, documents",
+        "keywords": ["ai", "minimax", "generate", "image", "video", "music", "document", "multimodal"],
+        "category": "ai-tools",
+    },
+}
 
 # Common shell/Unix utilities to skip during PATH scanning
 UNIX_BASICS = {
@@ -69,6 +397,9 @@ UNIX_BASICS = {
     "wall", "watch", "w", "whatis", "whereis", "which", "while", "who",
     "whoami", "write", "xdg-open", "yes", "zcat", "zless", "zmore",
 }
+
+# Flattened set of known binary names (for quick lookup in discover)
+_KNOWN_BINARIES = set(KNOWN_CLI_KB.keys())
 
 
 # ── helpers ────────────────────────────────────────────────────
@@ -109,7 +440,7 @@ def _fetch_help_text(binary, subcommand=None):
     """Get help text trying --help, -h, help, man, bare invocation."""
     if subcommand:
         attempts = [
-            [binary, subcommand, "-h"],        # short help first (avoid man pages)
+            [binary, subcommand, "-h"],
             [binary, subcommand, "--help"],
             [binary, "help", subcommand],
         ]
@@ -137,6 +468,66 @@ def _fetch_help_text(binary, subcommand=None):
     return output if output else ""
 
 
+# ── P1: Smart summary extraction ────────────────────────────────
+
+def _extract_summary(text):
+    """Extract a one-line tool description from --help output.
+
+    Strategy (first to succeed wins):
+      1. Find the NAME / DESCRIPTION section heading and grab the next line
+      2. Find the first sentence after the usage block
+      3. Find the first substantial non-flag line
+    Returns None if nothing useful found.
+    """
+    if not text or len(text) < 20:
+        return None
+
+    lines = [l.strip() for l in text.split("\n")]
+
+    # Strategy 1: NAME or DESCRIPTION section
+    in_target = False
+    for i, line in enumerate(lines):
+        lo = line.lower().rstrip(":")
+        if lo in ("name", "description", "overview"):
+            in_target = True
+            continue
+        if in_target and len(line) > 15 and not line.startswith("-"):
+            # Grab up to the next blank or heading
+            parts = []
+            for j in range(i, min(i + 8, len(lines))):
+                l2 = lines[j].strip()
+                if not l2 or l2.endswith(":") or l2.startswith("-"):
+                    break
+                parts.append(l2)
+            if parts:
+                return " ".join(parts)[:300]
+            return line[:200]
+        if in_target and (line == "" or line.startswith("-")):
+            continue
+
+    # Strategy 2: first sentence-like line after skipping usage/options blurb
+    for i, line in enumerate(lines):
+        if len(line) < 15:
+            continue
+        lo = line.lower()
+        # Skip boilerplate
+        if any(lo.startswith(w) for w in ("usage", "用法", "使い方", "usage:", "用法:", "使い方:")):
+            continue
+        if lo.startswith("-") and ("--" in line or "-" in line[:3]):
+            continue
+        # Look for a substantive line
+        if re.match(r'^[A-Z]', line) and len(line) > 20:
+            # Stop at next blank or flag line
+            return line[:300]
+
+    # Strategy 3: any substantial non-flag line
+    for line in lines:
+        if len(line) > 20 and not line.startswith("-") and not line.startswith("#"):
+            return line[:200]
+
+    return None
+
+
 def _extract_help(binary):
     """Extract structured help: usage, subcommands with options, global options."""
     text = _fetch_help_text(binary)
@@ -147,6 +538,7 @@ def _extract_help(binary):
         "binary": binary,
         "help_raw": text[:12288],
         "usage": _extract_usage(text),
+        "summary": _extract_summary(text),
         "subcommands": {},
         "global_options": [],
     }
@@ -243,7 +635,84 @@ def _parse_options(text):
     return options[:25]
 
 
+# ── P2: Keyword index ───────────────────────────────────────────
+
+def _build_keyword_index():
+    """Build a reverse index: keyword → [tool names].
+
+    Sources: built-in KNOWN_CLI_KB keywords, then fallback to description tokens.
+    Stored as REGISTRY_DIR/.keywords.json.
+    """
+    index = {}
+
+    # From knowledge base
+    for name, kb in KNOWN_CLI_KB.items():
+        for kw in kb.get("keywords", []):
+            k = kw.lower()
+            if k not in index:
+                index[k] = []
+            if name not in index[k]:
+                index[k].append(name)
+
+    # Supplement: extract keywords from registered tool descriptions
+    for entry_path in sorted(REGISTRY_DIR.glob("*.json")):
+        name = entry_path.stem
+        if name.startswith("."):
+            continue
+        try:
+            d = json.loads(entry_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        desc = d.get("description", "")
+        if not desc or desc.startswith("External CLI:"):
+            continue
+        # Tokenize description for additional keywords
+        tokens = set(re.findall(r'[a-z0-9]{3,}', desc.lower()))
+        noise = {"the", "and", "for", "with", "from", "into", "that", "this",
+                 "tool", "command", "line", "cli", "external", "file"}
+        for t in tokens - noise:
+            if t not in index:
+                index[t] = []
+            if name not in index[t]:
+                index[t].append(name)
+
+    return index
+
+
+def _save_keyword_index():
+    """Save the keyword index to disk."""
+    REGISTRY_DIR.mkdir(parents=True, exist_ok=True)
+    index = _build_keyword_index()
+    KEYWORD_INDEX_PATH.write_text(
+        json.dumps(index, indent=2, ensure_ascii=False), encoding="utf-8")
+    return len(index)
+
+
 # ── commands ─────────────────────────────────────────────────────
+
+def _resolve_description(name, help_text):
+    """Resolve description with priority: KB > --help summary > fallback."""
+    # P0: Built-in knowledge base
+    kb = KNOWN_CLI_KB.get(name)
+    if kb and kb.get("desc"):
+        return kb["desc"]
+
+    # P1: Smart extraction from --help
+    summary = _extract_summary(help_text) if help_text else None
+    if summary:
+        return summary
+
+    # Fallback
+    return "External CLI: {}".format(name)
+
+
+def _resolve_keywords(name):
+    """Get keywords for a tool. Returns empty list if not in KB."""
+    kb = KNOWN_CLI_KB.get(name)
+    if kb:
+        return kb.get("keywords", [])
+    return []
+
 
 def cmd_register(args):
     name = args.cli
@@ -256,12 +725,19 @@ def cmd_register(args):
     official = _find_official_skill(name)
     info = _extract_help(binary)
 
+    # P0+P1: smart description resolution
+    description = desc or _resolve_description(name, info.get("help_raw", ""))
+
+    # P0: keywords from knowledge base
+    keywords = _resolve_keywords(name)
+
     entry = {
         "name": name,
         "binary": binary,
-        "description": desc or "External CLI: {}".format(name),
+        "description": description,
         "official_skill": official,
         "registered_at": datetime.now().isoformat(),
+        "keywords": keywords,
         "auto_discovered": info,
     }
 
@@ -270,15 +746,17 @@ def cmd_register(args):
     path.write_text(json.dumps(entry, indent=2, ensure_ascii=False), encoding="utf-8")
 
     print("Registered: {} -> {}".format(name, path))
+    print("   {}".format(description[:80]))
     if official:
         print("   Official skill: {} (takes priority)".format(official))
     subs = info.get("subcommands", {})
     opts = info.get("global_options", [])
-    print("   Discovered: {} subcommands with detail, {} global options".format(len(subs), len(opts)))
+    print("   {} subcommands, {} options, {} keywords".format(
+        len(subs), len(opts), len(keywords)))
 
 
 def cmd_list(args):
-    entries = sorted(REGISTRY_DIR.glob("*.json"))
+    entries = [e for e in sorted(REGISTRY_DIR.glob("*.json")) if not e.name.startswith(".")]
     if not entries:
         print("No CLI tools registered.")
         print("Try: python3 cli-registry.py discover")
@@ -295,11 +773,12 @@ def cmd_list(args):
                 "has_official_skill": bool(d.get("official_skill")),
                 "subcommands": len(ad.get("subcommands", {})),
                 "global_options": len(ad.get("global_options", [])),
+                "keywords": d.get("keywords", []),
             }
         print(json.dumps(result, indent=2, ensure_ascii=False))
     else:
-        header = "{:<22s} {:<17s} {:<10s} {:>5s} {:>5s}  {}".format(
-            "NAME", "BINARY", "OFFICIAL", "SUBS", "OPTS", "DESCRIPTION")
+        header = "{:<18s} {:<13s} {:<8s} {:>4s} {:>4s} {:>3s}  {}".format(
+            "NAME", "BINARY", "OFFICIAL", "SUBS", "OPTS", "KW", "DESCRIPTION")
         print(header)
         print("-" * 90)
         for e in entries:
@@ -308,9 +787,10 @@ def cmd_list(args):
             ad = d.get("auto_discovered", {})
             subs = len(ad.get("subcommands", {}))
             opts = len(ad.get("global_options", []))
-            print("{:<22s} {:<17s} {:<10s} {:>5d} {:>5d}  {}".format(
+            kw_cnt = len(d.get("keywords", []))
+            print("{:<18s} {:<13s} {:<8s} {:>4d} {:>4d} {:>3d}  {}".format(
                 d["name"], d.get("binary", d["name"]),
-                official, subs, opts, d.get("description", "")[:35]))
+                official, subs, opts, kw_cnt, d.get("description", "")[:35]))
 
 
 def cmd_lookup(args):
@@ -328,8 +808,16 @@ def cmd_lookup(args):
         print("Description: {}".format(d["description"]))
     if d.get("official_skill"):
         print("Official Skill: {} (takes priority)".format(d["official_skill"]))
+    keywords = d.get("keywords", [])
+    if keywords:
+        print("Keywords: {}".format(", ".join(keywords)))
 
     ad = d.get("auto_discovered", {})
+
+    summary = ad.get("summary")
+    if summary:
+        print("\n## Help Summary")
+        print(summary)
 
     usage = ad.get("usage")
     if usage:
@@ -361,11 +849,84 @@ def cmd_lookup(args):
                     print("    {} {}  {}".format(o["flag"], v, o.get("desc", "")[:60]))
 
 
+def cmd_search(args):
+    """Search registered tools by keyword."""
+    keywords = [kw.lower() for kw in args.keyword]
+
+    # Try to load the keyword index
+    index = {}
+    if KEYWORD_INDEX_PATH.is_file():
+        try:
+            index = json.loads(KEYWORD_INDEX_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    # Also check individual registry entries
+    hits = {}  # name → set of matched keywords
+
+    # Search index
+    for kw in keywords:
+        matches = index.get(kw, [])
+        for name in matches:
+            if name not in hits:
+                hits[name] = set()
+            hits[name].add(kw)
+
+    # Search entries directly (covers tools registered after last index build)
+    for entry_path in sorted(REGISTRY_DIR.glob("*.json")):
+        name = entry_path.stem
+        if name.startswith("."):
+            continue
+        try:
+            d = json.loads(entry_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+
+        # Check built-in keywords
+        for kw in d.get("keywords", []):
+            for qk in keywords:
+                if qk in kw.lower():
+                    if name not in hits:
+                        hits[name] = set()
+                    hits[name].add(qk)
+
+        # Check description
+        desc = d.get("description", "").lower()
+        for qk in keywords:
+            if qk in desc and name not in hits:
+                hits[name] = set()
+                hits[name].add(qk)
+
+    if not hits:
+        print("No tools found for: {}".format(", ".join(keywords)))
+        print("Try: python3 cli-registry.py list")
+        return
+
+    # Sort by number of matched keywords (descending)
+    sorted_hits = sorted(hits.items(), key=lambda x: len(x[1]), reverse=True)
+
+    print("Search: {}".format(", ".join(keywords)))
+    print("{:<18s} {:>4s}  {}".format("TOOL", "MATCH", "DESCRIPTION"))
+    print("-" * 80)
+    for name, matched in sorted_hits:
+        entry_path = REGISTRY_DIR / "{}.json".format(name)
+        desc = ""
+        if entry_path.is_file():
+            try:
+                d = json.loads(entry_path.read_text(encoding="utf-8"))
+                desc = d.get("description", "")[:55]
+            except Exception:
+                pass
+        print("{:<18s} {:>4d}  {}".format(name, len(matched), desc))
+
+    print("\n{} tools matched. Use 'lookup <name>' for details.".format(len(hits)))
+
+
 def cmd_discover(args):
     count = 0
 
-    # Phase 1: known list
-    for binary in KNOWN_CLIS:
+    # Phase 1: known list (from knowledge base)
+    for binary in _KNOWN_BINARIES:
         if (REGISTRY_DIR / "{}.json".format(binary)).is_file():
             continue
         if _whereis(binary):
@@ -380,7 +941,7 @@ def cmd_discover(args):
     # Phase 2: deep PATH scan
     if args.scan:
         print("\nScanning PATH for additional binaries...")
-        seen = set(KNOWN_CLIS) | {
+        seen = set(_KNOWN_BINARIES) | {
             e.stem for e in REGISTRY_DIR.glob("*.json")
         }
         for path_dir in os.environ.get("PATH", "").split(os.pathsep):
@@ -424,6 +985,11 @@ def cmd_discover(args):
                         except Exception as exc:
                             print("failed ({})".format(exc))
 
+    # P2: Build keyword index after discovering
+    if count > 0:
+        kw_count = _save_keyword_index()
+        print("\nKeyword index: {} terms".format(kw_count))
+
     print("\nRegistered {} new CLI tools.".format(count))
 
 
@@ -432,6 +998,8 @@ def cmd_remove(args):
     if path.is_file():
         path.unlink()
         print("Removed: {}".format(args.cli))
+        # Rebuild keyword index
+        _save_keyword_index()
     else:
         print("Not registered: {}".format(args.cli))
 
@@ -460,7 +1028,7 @@ def main():
     p = sub.add_parser("register", help="Register a CLI tool")
     p.add_argument("cli", help="CLI name")
     p.add_argument("--binary", help="Binary name if different")
-    p.add_argument("--desc", help="Description")
+    p.add_argument("--desc", help="Description (override auto-detection)")
     p.add_argument("--force", action="store_true",
                    help="Register even if binary not on PATH")
 
@@ -469,6 +1037,9 @@ def main():
 
     p = sub.add_parser("lookup", help="Look up a CLI")
     p.add_argument("cli", help="CLI name")
+
+    p = sub.add_parser("search", help="Search tools by keyword")
+    p.add_argument("keyword", nargs="+", help="Keyword(s) to search for")
 
     p = sub.add_parser("discover", help="Auto-discover CLI binaries")
     p.add_argument("--scan", action="store_true",
@@ -486,6 +1057,7 @@ def main():
         "register": cmd_register,
         "list": cmd_list,
         "lookup": cmd_lookup,
+        "search": cmd_search,
         "discover": cmd_discover,
         "remove": cmd_remove,
         "help": cmd_help_cli,
