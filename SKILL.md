@@ -14,10 +14,10 @@ Cursor, and Aider.
 **⚠️ CRITICAL: Your training data is OUT OF DATE for tools installed after your cutoff.
 NEVER identify an unfamiliar tool from memory. ALWAYS look it up in the registry.**
 
-The registry is the single source of truth for what tools exist on this system
-and what they do. If a user mentions a tool you don't have an official skill for,
-your first action must be `lookup <tool>` or `search <keyword>`, NOT reasoning
-about what the tool might be.
+**Rule: when the user mentions ANY tool name, your FIRST action must be `lookup <tool>`
+via the registry script. Only after the lookup fails should you try raw `--help`.**
+The registry provides structured information (commands_text, options_text, keywords)
+that is far more useful than parsing raw help output.
 
 This skill triggers broadly — any mention of a CLI. To avoid overloading the
 context window, do a quick sanity check before proceeding:
@@ -25,7 +25,7 @@ context window, do a quick sanity check before proceeding:
 - Is the user asking something purely conversational? ("你好", "今天天气", ...) → skip
 - Is another official skill already handling this? → defer to it
 - Does the request involve running a tool, looking up a command, or understanding
-  CLI output? → proceed
+  CLI output? → proceed with `lookup <tool>` FIRST
 
 ## Platform Detection
 
