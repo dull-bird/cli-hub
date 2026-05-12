@@ -59,20 +59,17 @@ User: "use jq to extract the name field"
 
 ## Install
 
-Works with **OpenClaw, Claude Code, Codex CLI, Cursor, Aider** — auto-detects platform at runtime.
+Works with **OpenClaw, Claude Code, Codex CLI, Cursor, Aider, Gemini CLI, Copilot, Windsurf, Warp, Cursor** and 50+ more.
 
 ```bash
-# ClawHub (all platforms)
-npx openclaw skills install clihub
-
-# Or with global ClawHub CLI
-npm i -g clawhub && clawhub install clihub
+# Universal (all platforms, zero deps)
+npx skills add dull-bird/cli-hub
 
 # Or via OpenClaw
 openclaw skills install clihub
 
-# Manual
-git clone https://github.com/dull-bird/cli-hub.git ~/.agents/skills/cli-hub
+# Or via ClawHub CLI
+npm i -g clawhub && clawhub install clihub
 ```
 
 ## What It Looks Like

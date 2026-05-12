@@ -59,20 +59,17 @@ graph LR
 
 ## 安装
 
-兼容 **OpenClaw、Claude Code、Codex CLI、Cursor、Aider** — 运行时自动检测平台。
+兼容 **OpenClaw、Claude Code、Codex CLI、Cursor、Aider、Gemini CLI、Copilot、Windsurf、Warp** 等 50+ 平台。
 
 ```bash
-# ClawHub（全平台通用）
-npx openclaw skills install clihub
-
-# 或全局安装 ClawHub CLI
-npm i -g clawhub && clawhub install clihub
+# 通用方式（全平台，零依赖）
+npx skills add dull-bird/cli-hub
 
 # 或通过 OpenClaw
 openclaw skills install clihub
 
-# 手动安装
-git clone https://github.com/dull-bird/cli-hub.git ~/.agents/skills/cli-hub
+# 或通过 ClawHub CLI
+npm i -g clawhub && clawhub install clihub
 ```
 
 ## 实际效果
