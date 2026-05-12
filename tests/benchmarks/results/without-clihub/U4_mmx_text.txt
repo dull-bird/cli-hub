@@ -1,0 +1,26 @@
+[Thinking]
+The user is asking me to generate a short introduction about AI agents using "mmx". I need to clarify what "mmx" means in this context. 
+
+Looking at the available skills, I don't see any "mmx" skill listed. "mmx" could refer to:
+1. A tool or framework the user wants me to use
+2. A typo or abbreviation
+3. Something not in the available skill list
+
+Let me think about this more carefully. "mmx" is not among my available skills. It could be:
+- A specific tool/command not available to me
+- Perhaps the user means something else
+
+I should ask the user what they mean by "mmx" since I don't have that skill available and I'm not sure what it refers to in this context. But wait, let me reconsider - maybe it's a simple request and "mmx" is just a style/format reference? Or perhaps it refers to something like a specific model or approach?
+
+Actually, I think it's more likely the user is asking me to use a tool or command called "mmx" that I don't have access to. Let me just be straightforward and ask them what they mean, while also being helpful if they just want a general AI agent introduction.
+
+Actually, wait - could "mmx" be a reference to something like "multimodal" or is it an acronym? Let me just ask for clarification rather than guessing.
+[/Thinking]
+
+我没有 `mmx` 这个技能或工具可用。你指的是以下哪种情况？
+
+- **Multimodal (多模态)** — 需要我生成一段结合文字+其他模态的介绍？
+- **某个特定工具/平台** — 比如某个叫 mmx 的 AI 框架或命令行工具？
+- **纯文字介绍** — 只是想要一段关于 AI Agent 的简短介绍（"mmx" 是误输入）？
+
+请说明一下，我好帮你处理。

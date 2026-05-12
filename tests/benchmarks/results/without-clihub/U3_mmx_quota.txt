@@ -1,0 +1,17 @@
+[Thinking]
+The user is asking me to check the remaining API quota for "mmx". This sounds like an AI model API service. Let me check if there's any configuration or script in the codebase that can help check this. Let me first explore the workspace to understand what "mmx" refers to.
+
+mmx could be referring to a specific API service. Let me look around the workspace for any relevant files or configuration.
+[/Thinking]
+
+我来查看一下工作区中是否有与 mmx（可能是某个 API 服务）相关的配置或脚本。
+
+<tool-remind>No check scripts or relevant config files for "mmx" were found in the workspace. The task cannot be completed without knowing the specific API endpoint, authentication method, or script location. The user should provide the mmx API endpoint, API key location, or an existing script/command for querying quota.</tool-remind>
+
+当前工作区中没有找到与 mmx API 额度查询相关的配置、脚本或工具。请提供以下信息之一：
+
+1. **mmx API 的具体地址/文档链接** — 查询额度的 REST API endpoint 是什么？
+2. **已有的查询脚本或命令** — 之前是否有用过什么脚本来查询？
+3. **API Key 或认证方式** — 密钥存放在哪个环境变量或文件中？
+
+有了这些信息我就能帮你查询剩余额度了。

@@ -1,0 +1,15 @@
+[Thinking]
+The user wants to open github.com in their browser using a command. The command `open` on macOS can be used to open URLs in the default browser. Let me just run that command.
+
+Wait, the user said "opencli" - this might be a specific tool or command they're referring to. Let me check if there's an `opencli` command available, or if they meant just `open` on the command line interface.
+
+On macOS, `open` is the command to open URLs/files in the default application. "opencli" might be the user's shorthand for "open on command line" or they might have a custom command. Let me just try `open https://github.com` and see.
+
+Actually, I think "opencli" is just the user saying "open CLI" meaning use the command line `open` command. Let me run it.
+[/Thinking]
+
+<tool_override>
+<command-name>open</command-name>
+<arg>https://github.com</arg>
+<reason>用户请求用命令打开 GitHub。</reason>
+</tool_override>

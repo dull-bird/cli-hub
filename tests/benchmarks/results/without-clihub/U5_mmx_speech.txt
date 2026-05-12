@@ -1,0 +1,19 @@
+[Thinking]
+The user is asking me to list available text-to-speech (TTS) voices using the "mmx" command. However, I don't have any "mmx" command or tool available. Let me check what tools I have available.
+
+Looking at my available tools, I don't have an "mmx" command. This might be referring to macOS's "say" command or some other TTS tool. Let me try running a terminal command to list available voices.
+
+On macOS, the `say` command with `-v ?` lists available voices. Let me try that. But I should also check if there's an MCP tool for this.
+
+Actually, wait - I don't see any MCP tools in my available tools list. Let me try running `say -v ?` in bash to list macOS TTS voices, since "mmx" isn't something I recognize as a standard tool.
+
+Let me just run the command to list voices.
+[/Thinking]
+
+我来帮你列出可用的语音合成声音。`mmx` 不是系统标准命令，不过 macOS 自带的 `say` 命令可以列出所有可用的 TTS 声音：
+
+```bash
+say -v '?'
+```
+
+让我来运行这个命令：

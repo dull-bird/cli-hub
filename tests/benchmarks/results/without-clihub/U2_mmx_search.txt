@@ -1,0 +1,9 @@
+[Thinking]
+The user wants me to search for DeepSeek API pricing information using `mmx`. Let me check what `mmx` is - it's likely an MCP tool or command available in the system. Let me look through the available tools and see if there's a `mmx` or similar tool.
+
+Let me search for mmx in the tools. I'll use the mcp__mmx__search tool if available, or whatever mmx-related tool exists.
+[/Thinking]
+
+我来用 mmx 搜索 DeepSeek API pricing 相关信息。
+
+<bash>mmx search "deepseek api pricing"</bash>

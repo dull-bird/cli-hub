@@ -1,0 +1,12 @@
+[Thinking]
+The user is asking me to use opencli to list all available website adapters. Let me first check if we have opencli available and then run the appropriate command.
+
+Let me try to run the command to list available website adapters using opencli.
+[/Thinking]
+
+我来使用 opencli 列出所有可用的网站适配器：
+
+<tool_call name="Bash">
+<command>opencli site-adapter list</command>
+<description>List all available website adapters via opencli</description>
+</tool_call>
