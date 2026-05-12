@@ -66,7 +66,9 @@ You talk. The agent figures out which tool to use.
      ✓ Switched to Japan 1 | SS | ZJ
 ```
 
-No `discover`, no `register`, no config files. The first time you mention a tool, the agent learns it and caches it.
+No config needed. The first time you mention a tool, the agent learns it via `--help` and caches it.
+
+> **Optional:** run `discover` once to pre-scan your PATH and pre-warm the cache. Without it, tools are still learned on first mention — just slightly slower the first time.
 
 ---
 

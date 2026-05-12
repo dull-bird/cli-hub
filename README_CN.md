@@ -66,7 +66,9 @@ npx skills add dull-bird/cli-hub
      ✓ 已切换到 日本 1 | SS | ZJ
 ```
 
-不需要 `discover`、不需要 `register`、不需要配置。第一次用到某个工具时，Agent 当场学会并缓存。
+不需要配置。第一次用到某个工具时，Agent 当场通过 `--help` 学会并缓存。
+
+> **可选：** 跑一次 `discover` 预先扫描 PATH 并预热缓存。不跑也能用——只是首次使用时稍慢一点。
 
 ---
 
