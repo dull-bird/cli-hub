@@ -1,9 +1,4 @@
-*.pyc
 __pycache__/
-*.egg-info/
-dist/
-*.zip
-.DS_Store
-*.swp
-*.swo
-~*
+*.pyc
+.clawhub/
+node_modules/

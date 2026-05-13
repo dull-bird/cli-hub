@@ -1,0 +1,28 @@
+name: Publish to ClawHub
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'SKILL.md'
+      - 'scripts/**'
+      - 'references/**'
+  workflow_dispatch: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install clawhub CLI
+        run: npm install -g clawhub
+
+      - name: Publish to ClawHub
+        run: clawhub sync --all --yes
+        env:
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
