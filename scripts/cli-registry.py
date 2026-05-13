@@ -366,6 +366,16 @@ KNOWN_CLI_KB = {
         "keywords": ["ai", "minimax", "generate", "image", "video", "music", "document", "multimodal"],
         "category": "ai-tools",
     },
+    "clang": {
+        "desc": "C language family compiler frontend — compile C/C++/Objective-C",
+        "keywords": ["compiler", "c", "c++", "objc", "clang", "build", "compile"],
+        "category": "development",
+    },
+    "clangd": {
+        "desc": "Clang Language Server — IDE features for C/C++ (auto-complete, goto-def, diagnostics)",
+        "keywords": ["lsp", "language server", "c", "c++", "ide", "autocomplete", "diagnostics", "clangd"],
+        "category": "development",
+    },
 }
 
 # Common shell/Unix utilities to skip during PATH scanning
@@ -1153,41 +1163,42 @@ def cmd_discover(args):
 
     # Determine which PATH dirs to scan
     all_path_dirs = [d for d in os.environ.get("PATH", "").split(os.pathsep) if Path(d).is_dir()]
+    user_paths = {os.path.expanduser(p) for p in (
+        "~/.local/bin", "~/.local/node/bin", "~/.npm-global/bin",
+        "~/bin", "~/.nvm/current/bin", "~/.nix-profile/bin",
+    )}
+    # Always include /usr/local/bin for tools installed via make install / brew
+    user_paths.add("/usr/local/bin")
 
     if args.scan or scan_names:
         scan_paths = all_path_dirs
     elif args.scan_path:
         scan_paths = [args.scan_path]
     else:
-        # Default: user-installed paths only
-        user_paths = {os.path.expanduser(p) for p in (
-            "~/.local/bin", "~/.local/node/bin", "~/.npm-global/bin",
-            "~/bin", "~/.nvm/current/bin", "~/.nix-profile/bin",
-        )}
         scan_paths = [d for d in all_path_dirs if d in user_paths]
 
-    # Phase 1: known list (from knowledge base) — always run
-    for binary in _KNOWN_BINARIES:
+    # Phase 1: KB tools — scan ALL PATH, ALWAYS register (trusted, no quality check)
+    for binary in sorted(_KNOWN_BINARIES):
         if scan_names and binary not in scan_names:
             continue
         if (REGISTRY_DIR / "{}.json".format(binary)).is_file():
             continue
         if _whereis(binary):
-            print("Found: {} ...".format(binary), end=" ", flush=True)
+            print("Found: {} (KB)".format(binary))
             try:
                 cmd_register(argparse.Namespace(
                     cli=binary, binary=binary, desc="", force=False))
                 count += 1
             except Exception as exc:
-                print("failed ({})".format(exc))
+                print("  failed ({})".format(exc))
 
-    # Phase 2: PATH scan
-    if scan_names:
-        print("\nScanning PATH for: {} ...".format(", ".join(sorted(scan_names))))
-
+    # Phase 2: Non-KB PATH scan (default=user paths, --scan=all)
     seen = set(_KNOWN_BINARIES) | {
         e.stem for e in REGISTRY_DIR.glob("*.json")
     }
+    if scan_names:
+        print("\nScanning PATH for: {} ...".format(", ".join(sorted(scan_names))))
+
     for path_dir in scan_paths:
         d = Path(path_dir)
         if not d.is_dir():
@@ -1203,26 +1214,29 @@ def cmd_discover(args):
                     continue
                 if not re.match(r'^[a-z][a-z0-9._-]+$', name):
                     continue
-                # Name filter
                 if scan_names and name not in scan_names:
                     continue
-                if entry.is_file() and os.access(str(entry), os.X_OK):
-                    seen.add(name)
-                    if use_filter:
-                        result = _extract_help(str(entry))
-                        if _is_noise_help(result.get("help_raw", "")):
-                            skipped += 1
-                            continue
-                        if _score_tool_quality(result) < _MIN_QUALITY_SCORE:
-                            skipped += 1
-                            continue
-                    print("Found: {} ...".format(name), end=" ", flush=True)
-                    try:
-                        cmd_register(argparse.Namespace(
-                            cli=name, binary=str(entry), desc="", force=False))
-                        count += 1
-                    except Exception as exc:
-                        print("failed ({})".format(exc))
+                if not (entry.is_file() and os.access(str(entry), os.X_OK)):
+                    continue
+                seen.add(name)
+
+                # Quality filter for non-KB tools
+                if use_filter or (not args.scan and not scan_names):
+                    result = _extract_help(str(entry))
+                    if _is_noise_help(result.get("help_raw", "")):
+                        skipped += 1
+                        continue
+                    if _score_tool_quality(result) < _MIN_QUALITY_SCORE:
+                        skipped += 1
+                        continue
+
+                print("Found: {} ...".format(name), end=" ", flush=True)
+                try:
+                    cmd_register(argparse.Namespace(
+                        cli=name, binary=str(entry), desc="", force=False))
+                    count += 1
+                except Exception as exc:
+                    print("failed ({})".format(exc))
         except PermissionError:
             continue
 
