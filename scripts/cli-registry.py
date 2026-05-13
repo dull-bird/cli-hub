@@ -1089,66 +1089,54 @@ def cmd_discover(args):
     count = 0
     skipped = 0
     use_filter = not getattr(args, 'no_filter', False) and not args.scan
+    scan_names = None  # None = scan all, set = only these names
 
-    # User-installed paths only by default; full PATH with --scan
-    user_paths = {os.path.expanduser(p) for p in (
-        "~/.local/bin", "~/.local/node/bin", "~/.npm-global/bin",
-        "~/bin", "~/.nvm/current/bin", "~/.nix-profile/bin",
-    )}
+    if getattr(args, 'names', None):
+        scan_names = set(n.strip() for n in args.names.split(",") if n.strip())
+    elif getattr(args, 'kb', False):
+        scan_names = _KNOWN_BINARIES
+
+    # Determine which PATH dirs to scan
     all_path_dirs = [d for d in os.environ.get("PATH", "").split(os.pathsep) if Path(d).is_dir()]
 
-    if args.scan:
+    if args.scan or scan_names:
         scan_paths = all_path_dirs
     elif args.scan_path:
         scan_paths = [args.scan_path]
     else:
-        # Default: KB + user-installed paths (fast and useful)
+        # Default: user-installed paths only
+        user_paths = {os.path.expanduser(p) for p in (
+            "~/.local/bin", "~/.local/node/bin", "~/.npm-global/bin",
+            "~/bin", "~/.nvm/current/bin", "~/.nix-profile/bin",
+        )}
         scan_paths = [d for d in all_path_dirs if d in user_paths]
-
-    def _should_register(name, binary_path, force=False):
-        """Try to register a tool; with quality filtering if enabled."""
-        nonlocal count, skipped
-        if (REGISTRY_DIR / "{}.json".format(name)).is_file():
-            return
-
-        if use_filter:
-            result = _extract_help(binary_path)
-            if _is_noise_help(result.get("help_raw", "")):
-                skipped += 1
-                return
-            if _score_tool_quality(result) < _MIN_QUALITY_SCORE:
-                skipped += 1
-                return
-
-        print("Found: {} ...".format(name), end=" ", flush=True)
-        try:
-            cmd_register(argparse.Namespace(
-                cli=name, binary=binary_path, desc="", force=False))
-            count += 1
-        except Exception as exc:
-            print("failed ({})".format(exc))
 
     # Phase 1: known list (from knowledge base) — always run
     for binary in _KNOWN_BINARIES:
+        if scan_names and binary not in scan_names:
+            continue
         if (REGISTRY_DIR / "{}.json".format(binary)).is_file():
             continue
         if _whereis(binary):
-            _should_register(binary, binary)
+            print("Found: {} ...".format(binary), end=" ", flush=True)
+            try:
+                cmd_register(argparse.Namespace(
+                    cli=binary, binary=binary, desc="", force=False))
+                count += 1
+            except Exception as exc:
+                print("failed ({})".format(exc))
 
     # Phase 2: PATH scan
+    if scan_names:
+        print("\nScanning PATH for: {} ...".format(", ".join(sorted(scan_names))))
+
+    seen = set(_KNOWN_BINARIES) | {
+        e.stem for e in REGISTRY_DIR.glob("*.json")
+    }
     for path_dir in scan_paths:
         d = Path(path_dir)
         if not d.is_dir():
             continue
-        if args.scan:
-            print("\nScanning {} ...".format(path_dir))
-        else:
-            # Only print a header for the first user path scanned
-            pass
-
-        seen = set(_KNOWN_BINARIES) | {
-            e.stem for e in REGISTRY_DIR.glob("*.json")
-        }
         try:
             for entry in d.iterdir():
                 name = entry.name
@@ -1158,16 +1146,33 @@ def cmd_discover(args):
                     continue
                 if not re.match(r'^[a-z][a-z0-9._-]+$', name):
                     continue
+                # Name filter
+                if scan_names and name not in scan_names:
+                    continue
                 if entry.is_file() and os.access(str(entry), os.X_OK):
                     seen.add(name)
-                    _should_register(name, str(entry))
+                    if use_filter:
+                        result = _extract_help(str(entry))
+                        if _is_noise_help(result.get("help_raw", "")):
+                            skipped += 1
+                            continue
+                        if _score_tool_quality(result) < _MIN_QUALITY_SCORE:
+                            skipped += 1
+                            continue
+                    print("Found: {} ...".format(name), end=" ", flush=True)
+                    try:
+                        cmd_register(argparse.Namespace(
+                            cli=name, binary=str(entry), desc="", force=False))
+                        count += 1
+                    except Exception as exc:
+                        print("failed ({})".format(exc))
         except PermissionError:
             continue
 
     if use_filter and skipped > 0:
         print("\n  (filtered {} low-quality/noise tools)".format(skipped))
 
-    # Phase 3: custom directory (always unfiltered)
+    # Phase 3: custom directory
     if args.scan_path:
         sp = Path(args.scan_path)
         if sp.is_dir():
@@ -1285,6 +1290,9 @@ def main():
     p = sub.add_parser("discover", help="Auto-discover CLI binaries (user paths, filtered)")
     p.add_argument("--scan", action="store_true",
                    help="Full PATH scan: all directories, no quality filter")
+    p.add_argument("--names", help="Comma-separated tool names to scan for (over PATH)")
+    p.add_argument("--kb", action="store_true",
+                   help="Full PATH scan limited to knowledge-base tools (fast + safe)")
     p.add_argument("--scan-path", help="Extra directory to scan for executables")
     p.add_argument("--no-filter", action="store_true",
                    help="Disable quality filtering (register noise too)")
