@@ -8,7 +8,7 @@ Usage:
     python3 cli-registry.py register <name> [--binary <bin>] [--desc <text>]
     python3 cli-registry.py list [--format json]
     python3 cli-registry.py lookup <name>
-    python3 cli-registry.py discover [--scan-path <dir>]
+    python3 cli-registry.py discover [--scan] [--scan-path <dir>] [--no-filter]
     python3 cli-registry.py remove <name>
     python3 cli-registry.py help <name>
     python3 cli-registry.py search <keyword...>
@@ -642,6 +642,86 @@ def _extract_help(binary):
     return result
 
 
+# ── P3: Quality scoring / noise filtering ─────────────────────
+
+_NOISE_PATTERNS = [
+    # Error from dynamic linker / missing libraries
+    r'error while loading shared libraries',
+    r'error while loading',
+    # Node.js / process errors
+    r'error:\s',
+    r'eaddrinuse',
+    r'econnrefused',
+    r'enoent',
+    r'module_not_found',
+    r'cannot find module',
+    # Shell/exec errors
+    r'command not found',
+    r'no such file or directory',
+    r'permission denied',
+    r'syntax error',
+    # Pure error stubs
+    r'^/.*\berror[:\s]',
+]
+
+def _is_noise_help(help_raw):
+    """Returns True if the help output looks like an error, not real help."""
+    if not help_raw or len(help_raw) < 50:
+        return True
+    # If the entire output is just usage (no description, no commands, no options),
+    # it's likely not a useful CLI tool to register.
+    lower = help_raw.lower()
+    for pat in _NOISE_PATTERNS:
+        if re.search(pat, lower):
+            return True
+    return False
+
+
+def _score_tool_quality(result):
+    """Score extracted help data 0-10. Higher = more useful to register."""
+    score = 0.0
+    summary = result.get("summary", "") or ""
+    subcommands = result.get("subcommands", {})
+    options_text = result.get("options_text", "") or ""
+    usage = result.get("usage", "") or ""
+    help_raw = result.get("help_raw", "")
+    commands_text = result.get("commands_text", "") or ""
+
+    # Has meaningful summary (not just usage line repeated)
+    if summary and len(summary) > 20 and summary != usage.strip():
+        score += 3.0
+    elif summary and len(summary) > 10:
+        score += 1.5
+
+    # Has subcommands → interactive CLI tool
+    if subcommands and len(subcommands) > 1:
+        score += 3.0
+    elif subcommands and len(subcommands) == 1:
+        score += 1.5
+
+    # Has structured options → useful flag surface
+    if options_text and len(options_text) > 40:
+        score += 2.0
+    elif options_text and len(options_text) > 10:
+        score += 1.0
+
+    # Length of help_raw indicates documentation richness
+    if help_raw and len(help_raw) > 500:
+        score += 1.5
+    elif help_raw and len(help_raw) > 100:
+        score += 0.5
+
+    # Commands_text shows the tool has structured subcommands
+    if commands_text and len(commands_text) > 100:
+        score += 0.5
+
+    return score
+
+
+# Quality threshold for filtered scan (default discover)
+_MIN_QUALITY_SCORE = 3.0
+
+
 def _extract_usage(text):
     """Extract usage line(s)."""
     lines = []
@@ -1007,52 +1087,87 @@ def cmd_search(args):
 
 def cmd_discover(args):
     count = 0
+    skipped = 0
+    use_filter = not getattr(args, 'no_filter', False) and not args.scan
 
-    # Phase 1: known list (from knowledge base)
+    # User-installed paths only by default; full PATH with --scan
+    user_paths = {os.path.expanduser(p) for p in (
+        "~/.local/bin", "~/.local/node/bin", "~/.npm-global/bin",
+        "~/bin", "~/.nvm/current/bin", "~/.nix-profile/bin",
+    )}
+    all_path_dirs = [d for d in os.environ.get("PATH", "").split(os.pathsep) if Path(d).is_dir()]
+
+    if args.scan:
+        scan_paths = all_path_dirs
+    elif args.scan_path:
+        scan_paths = [args.scan_path]
+    else:
+        # Default: KB + user-installed paths (fast and useful)
+        scan_paths = [d for d in all_path_dirs if d in user_paths]
+
+    def _should_register(name, binary_path, force=False):
+        """Try to register a tool; with quality filtering if enabled."""
+        nonlocal count, skipped
+        if (REGISTRY_DIR / "{}.json".format(name)).is_file():
+            return
+
+        if use_filter:
+            result = _extract_help(binary_path)
+            if _is_noise_help(result.get("help_raw", "")):
+                skipped += 1
+                return
+            if _score_tool_quality(result) < _MIN_QUALITY_SCORE:
+                skipped += 1
+                return
+
+        print("Found: {} ...".format(name), end=" ", flush=True)
+        try:
+            cmd_register(argparse.Namespace(
+                cli=name, binary=binary_path, desc="", force=False))
+            count += 1
+        except Exception as exc:
+            print("failed ({})".format(exc))
+
+    # Phase 1: known list (from knowledge base) — always run
     for binary in _KNOWN_BINARIES:
         if (REGISTRY_DIR / "{}.json".format(binary)).is_file():
             continue
         if _whereis(binary):
-            print("Found: {} ...".format(binary), end=" ", flush=True)
-            try:
-                cmd_register(argparse.Namespace(
-                    cli=binary, binary=binary, desc="", force=False))
-                count += 1
-            except Exception as exc:
-                print("failed ({})".format(exc))
+            _should_register(binary, binary)
 
-    # Phase 2: deep PATH scan
-    if args.scan:
-        print("\nScanning PATH for additional binaries...")
+    # Phase 2: PATH scan
+    for path_dir in scan_paths:
+        d = Path(path_dir)
+        if not d.is_dir():
+            continue
+        if args.scan:
+            print("\nScanning {} ...".format(path_dir))
+        else:
+            # Only print a header for the first user path scanned
+            pass
+
         seen = set(_KNOWN_BINARIES) | {
             e.stem for e in REGISTRY_DIR.glob("*.json")
         }
-        for path_dir in os.environ.get("PATH", "").split(os.pathsep):
-            d = Path(path_dir)
-            if not d.is_dir():
-                continue
-            try:
-                for entry in d.iterdir():
-                    name = entry.name
-                    if name in seen or name in UNIX_BASICS:
-                        continue
-                    if len(name) < 2 or len(name) > 30:
-                        continue
-                    if not re.match(r'^[a-z][a-z0-9._-]+$', name):
-                        continue
-                    if entry.is_file() and os.access(str(entry), os.X_OK):
-                        seen.add(name)
-                        print("Found: {} ...".format(name), end=" ", flush=True)
-                        try:
-                            cmd_register(argparse.Namespace(
-                                cli=name, binary=str(entry), desc="", force=False))
-                            count += 1
-                        except Exception as exc:
-                            print("failed ({})".format(exc))
-            except PermissionError:
-                continue
+        try:
+            for entry in d.iterdir():
+                name = entry.name
+                if name in seen or name in UNIX_BASICS:
+                    continue
+                if len(name) < 2 or len(name) > 30:
+                    continue
+                if not re.match(r'^[a-z][a-z0-9._-]+$', name):
+                    continue
+                if entry.is_file() and os.access(str(entry), os.X_OK):
+                    seen.add(name)
+                    _should_register(name, str(entry))
+        except PermissionError:
+            continue
 
-    # Phase 3: custom directory
+    if use_filter and skipped > 0:
+        print("\n  (filtered {} low-quality/noise tools)".format(skipped))
+
+    # Phase 3: custom directory (always unfiltered)
     if args.scan_path:
         sp = Path(args.scan_path)
         if sp.is_dir():
@@ -1068,7 +1183,6 @@ def cmd_discover(args):
                         except Exception as exc:
                             print("failed ({})".format(exc))
 
-    # P2: Build keyword index after discovering
     if count > 0:
         kw_count = _save_keyword_index()
         print("\nKeyword index: {} terms".format(kw_count))
@@ -1168,10 +1282,12 @@ def main():
     p = sub.add_parser("search", help="Search tools by keyword")
     p.add_argument("keyword", nargs="+", help="Keyword(s) to search for")
 
-    p = sub.add_parser("discover", help="Auto-discover CLI binaries")
+    p = sub.add_parser("discover", help="Auto-discover CLI binaries (user paths, filtered)")
     p.add_argument("--scan", action="store_true",
-                   help="Deep scan all PATH directories (slower, finds more)")
+                   help="Full PATH scan: all directories, no quality filter")
     p.add_argument("--scan-path", help="Extra directory to scan for executables")
+    p.add_argument("--no-filter", action="store_true",
+                   help="Disable quality filtering (register noise too)")
 
     p = sub.add_parser("check-stale", help="Check for tools with updated versions")
     p.add_argument("--update", action="store_true",
