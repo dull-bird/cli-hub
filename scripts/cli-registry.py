@@ -21,6 +21,7 @@ import re
 import sys
 import argparse
 import subprocess
+import fnmatch
 from datetime import datetime
 from pathlib import Path
 
@@ -397,6 +398,46 @@ UNIX_BASICS = {
     "wall", "watch", "w", "whatis", "whereis", "which", "while", "who",
     "whoami", "write", "xdg-open", "yes", "zcat", "zless", "zmore",
 }
+
+# Name patterns to skip during PATH scan (glob). Applied automatically with --scan.
+_SYSTEM_NOISE_PATTERNS = [
+    "x86_64-*", "i386*", "i686*", "arm-*", "aarch64-*", "powerpc*",
+    "dpkg-*", "deb-*", "dh_*",
+    "pbm*", "pgm*", "pnm*", "ppm*", "pnmt*", "pnmd*", "pnms*",
+    "pam*", "ybm*", "bmpt*", "anytopnm", "bmtoa", "giftopnm",
+    "jpegtopnm", "pngtopnm", "pnmto*", "pnm-*",
+    "*-cc-*", "gcc-*", "g++-*", "c++-*", "cpp-*",
+    "clang-*", "clang++-*", "llvm-*",
+    "*-config", "*-setup",
+    "systemd-*", "busctl*",
+    "x-*", "xsession*", "xset*", "xvfb*", "xgamma",
+    "xhost", "xinput*", "xkill", "xmodmap", "xrdb", "xrefresh", "xsetroot",
+    "man-recode", "man2*", "pod2*", "perldoc*",
+    "ptar*", "ptargrep", "ptardiff", "perl*", "pl2*", "prove",
+    "avahi-*", "dbus-*", "eject", "getent", "gsettings*", "gvfs-*",
+    "hwclock", "ispell*", "locale", "logname", "logger",
+    "md5sum*", "ntfs-*", "os-prober", "paperconf*", "pbmt*",
+    "pkexec", "pldd", "policy-*", "prename", "ptx", "pwdx",
+    "rename.ul", "rev", "rotatelogs", "rtmon", "runcon", "runuser",
+    "script", "scriptreplay", "sensible-*", "setsid",
+    "sha1*", "sha256*", "sha384*", "sha512*", "shred",
+    "skill", "slabtop", "snice", "splain",
+    "ss-local", "ss-redir", "ss-server",
+    "tabs", "taskset", "tempfile", "tic", "tload",
+    "tzselect", "unlink26", "unshare",
+    "update-*", "utmp*", "vmstat", "volname",
+    "zdump", "zegrep", "zfgrep", "zic",
+    "alsabat", "alsaloop", "alsamixer", "alsatplg", "alsaucm",
+    "aplay", "arecord", "amidi", "aplaymidi", "aseqdump",
+    "aseqnet", "iecset", "speaker-test",
+    "animate-im*", "compare-im*", "composite-im*", "conjure-im*",
+    "convert-im*", "display-im*", "identify-im*", "import-im*",
+    "mogrify-im*", "montage-im*", "stream-im*",
+    "get-edid", "getwebcam", "parse-edid",
+    "setpci", "setxkbmap", "showconsolefont",
+    "spice-vdagent", "spice-vdagentd",
+    "python*-config", "python*.*-config",
+]
 
 # Flattened set of known binary names (for quick lookup in discover)
 _KNOWN_BINARIES = set(KNOWN_CLI_KB.keys())
@@ -1096,6 +1137,20 @@ def cmd_discover(args):
     elif getattr(args, 'kb', False):
         scan_names = _KNOWN_BINARIES
 
+    # Exclude patterns (glob): skip matching names during scan.
+    # When --scan, automatically include system noise patterns.
+    exclude_pats = []
+    if args.scan:
+        exclude_pats.extend(_SYSTEM_NOISE_PATTERNS)
+    if getattr(args, 'exclude', None):
+        exclude_pats.extend(p.strip() for p in args.exclude.split(",") if p.strip())
+
+    def _matches_exclude(name):
+        for pat in exclude_pats:
+            if fnmatch.fnmatch(name, pat):
+                return True
+        return False
+
     # Determine which PATH dirs to scan
     all_path_dirs = [d for d in os.environ.get("PATH", "").split(os.pathsep) if Path(d).is_dir()]
 
@@ -1141,6 +1196,8 @@ def cmd_discover(args):
             for entry in d.iterdir():
                 name = entry.name
                 if name in seen or name in UNIX_BASICS:
+                    continue
+                if _matches_exclude(name):
                     continue
                 if len(name) < 2 or len(name) > 30:
                     continue
@@ -1291,6 +1348,7 @@ def main():
     p.add_argument("--scan", action="store_true",
                    help="Full PATH scan: all directories, no quality filter")
     p.add_argument("--names", help="Comma-separated tool names to scan for (over PATH)")
+    p.add_argument("--exclude", help="Comma-separated patterns to skip (glob). --scan auto-excludes system noise")
     p.add_argument("--kb", action="store_true",
                    help="Full PATH scan limited to knowledge-base tools (fast + safe)")
     p.add_argument("--scan-path", help="Extra directory to scan for executables")
