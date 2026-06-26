@@ -1,35 +1,26 @@
 # cli-hub
 
-> 一个 Skill。系统里所有 CLI 工具。零配置。
+> 一个 Skill，让 Agent 会用你机器上**每一个** CLI —— **包括它从没听说过的那些。**
+
+[English →](README.md)
+
+Agent 认得 `git`、`docker`，但它**不认得**你上周刚装的那个 CLI，也不认得任何在它训练
+截止之后发布的工具——于是它瞎编参数、猜错工具、或者干脆放弃。cli-hub 的办法：给 Agent
+一个本地小注册表，记录**你真正拥有的**工具；并且（可选）在恰当的时机把对应条目**主动塞进**
+它的上下文。
 
 ```mermaid
 graph LR
-    CH["🔄 cli-hub<br/>一个 Skill<br/>管理所有 CLI"] --> git["🔀 git"]
-    CH --> gh["🐙 gh"]
-    CH --> docker["🐳 docker"]
-    CH --> kubectl["☸️ kubectl"]
-    CH --> ffmpeg["🎬 ffmpeg"]
-    CH --> jq["🧩 jq"]
-    CH --> curl["🌐 curl"]
-    CH --> rg["🔎 rg"]
-    CH --> python3["🐍 python3"]
-    CH --> node["💚 node"]
-    CH --> ssh["🔐 ssh"]
-    CH --> more["📦 +50 more"]
+    CH["🔄 cli-hub<br/>一个 Skill<br/>你机器上的 CLI"] --> known["✅ git / jq / docker<br/>(Agent 已认得)"]
+    CH --> novel["🆕 mmx / kimi / 你的工具<br/>(Agent 不认得)"]
+    novel --> disc["发现: '有这个工具'"]
+    novel --> use["用法: 子命令 + 参数"]
 
     style CH fill:#4f46e5,color:#fff,stroke:#312e81
-    style git fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style gh fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style docker fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style kubectl fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style ffmpeg fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style jq fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style curl fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style rg fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style python3 fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style node fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style ssh fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style more fill:#fef3c7,stroke:#f59e0b,color:#92400e
+    style known fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style novel fill:#fef3c7,stroke:#f59e0b,color:#92400e
+    style disc fill:#eef2ff,stroke:#6366f1,color:#3730a3
+    style use fill:#eef2ff,stroke:#6366f1,color:#3730a3
 ```
 
 ## 安装
@@ -38,188 +29,144 @@ graph LR
 npx skills add dull-bird/cli-hub
 ```
 
-搞定。你的 AI Agent 从此知道怎么用系统里任何 CLI 工具。
-
 兼容 55+ Agent：OpenClaw、Claude Code、Cursor、Gemini CLI、Copilot、Windsurf、Warp 等。
 
-## 使用
+## 两种工作方式
 
-安装后，用自然语言让 Agent 预热：
+**1. 拉取（默认，所有 Agent）。** Agent 要用某个工具时，Skill 让它先查本地注册表——
+拿到真实的子命令和参数，而不是猜。工具还没注册，就退化为现场 `--help` 当场学。
 
-```
- 👤  "扫描我的系统，把所有能找到的 CLI 工具都注册一下"
- 🤖  [cli-hub: discover → 注册了 37 个工具]
-     完成了。找到了 git, docker, curl, python3...
+**2. 推送（Claude Code，可选）。** 从"拉取"切到"自动"，让注册表主动找上 Agent——
+不依赖它记得去查：
 
- 👤  "注册一下 my-tool，让你知道怎么用它"
- 🤖  [cli-hub: register my-tool → 5 个子命令, 12 个参数]
-     已注册。
+```bash
+python3 scripts/install-hooks.py        # 卸载用 --uninstall
 ```
 
-然后正常说话就行：
+| 时机 | Hook | 注入什么 |
+|------|------|---------|
+| 你发消息时 | `UserPromptSubmit` | 本机装了哪些**它不认得**的工具——于是它会去掏 `mmx`/你的工具，而不是说"我不行"。每会话一次。 |
+| 命令执行前 | `PreToolUse(Bash)` | 命令里那个陌生工具的**用法**（子命令/参数）。每工具每会话一次。 |
 
-```
- 👤  "统计 data.json 里还有几个没完成的待办"
- 🤖  [cli-hub: 搜索 "json count filter" → jq]
-     [cli-hub: jq 有 15 条命令, 关键词: json, filter, transform]
-     > jq '[.[] | select(.completed==false)] | length' data.json
-     3
+两个 hook 都是非阻塞的（只加上下文），且只对**模型不认识**的工具触发——
+`git`、`docker`、`jq` 零开销。
 
- 👤  "看看 docker 在跑什么容器"
- 🤖  [cli-hub: 搜索 "container running" → docker]
-     [cli-hub: docker 有 36 条命令, 关键词: container, image, run]
-     > docker ps
-     CONTAINER ID  IMAGE         STATUS       NAMES
-     a1b2c3d4e5f6  nginx:latest  Up 2 hours   web
+## 快速上手
 
- 👤  "切到日本节点"
- 🤖  [cli-hub: mihomo/SKILL.md 存在 — 官方 Skill]
-     [交给官方 Skill 处理]
-     ✓ 已切换到 日本 1 | SS | ZJ
+```bash
+S=~/.agents/skills/cli-hub/scripts/cli-registry.py   # 路径随 Agent 而变
+
+python3 $S discover                  # 扫 PATH，注册已有工具
+python3 $S flag mmx                  # 标记一个模型不认识的工具
+python3 $S non-standard              # 预览发现清单
+python3 ~/.agents/skills/cli-hub/scripts/install-hooks.py   # (Claude Code) 开启自动模式
 ```
 
-工具在首次提到时自动发现并缓存。
+或者直接对 Agent 说：*"扫描我的系统，注册我的 CLI 工具"*、*"把 mmx 和 kimi 标记一下，让你知道它们存在"*。
 
-> 💡 **提示：** 对 Agent 说"注册一下 <tool>"，小众或刚装的工具立即拿到完整信息。
+> 💡 发现清单来自**你自己的**机器。cli-hub 出厂时对你用什么工具一无所知——
+> 由你用 `flag` 决定哪些浮现出来。
 
----
+## 命令
+
+| 命令 | 用途 |
+|------|------|
+| `discover` | 扫 PATH，注册已知 + 质量过滤后的工具 |
+| `list` | 列出已注册工具 |
+| `lookup <名称>` | 完整信息：描述、关键词、子命令、参数、help |
+| `search <关键词>` | 按任务找工具（如 `search json extract`） |
+| `non-standard` | 列出模型可能不认识的已装工具（发现清单） |
+| `flag <名称> [--off]` | 标记/取消标记某工具为 novel（浮现它） |
+| `register <名称> [--novel] [--desc "…"]` | 注册工具；`--novel` 浮现它 |
+| `hint <名称>` | 某 novel 工具的精简用法提示（hook 使用） |
+| `check-stale [--update]` | 检测/重注册版本变化的工具 |
+| `remove <名称>` | 从注册表移除 |
+
+## 设计原则
+
+- **注册表就是数据库。** cli-hub 运行时从不联网；hook 和查询只读本地 JSON。零网络。
+- **"novel" 是显式标记，绝不靠推断。** 裸扫 PATH 会注册几百个系统二进制——所以一个工具
+  只有你 `flag` 了（或它自带 `novel` 标记）才会浮现。零噪音。
+- **不夹带对你的任何预设。** 不预埋**你的**工具清单，也不绑定任何搜索引擎。产品只负责
+  *存* 描述；*查* 描述是 Agent 的事，用它手上任何工具和知识。
+- **让位给官方 Skill。** 若 `~/…/skills/<tool>/SKILL.md` 存在，cli-hub 自动退让——
+  作者最懂自己的工具。
+
+## 严格建库（调研配方）
+
+自动从 `--help` 提取的摘要常常含糊甚至错误。要整理一条真实描述——provider-agnostic，
+不假设任何特定搜索引擎：
+
+1. **读工具本身** —— `<tool> --help`、`<tool> --version`。
+2. **用包管理器核身份/版本/重名**（`npm view <包>`、`curl https://pypi.org/pypi/<包>/json`）。
+   很多二进制名会撞车——`codex` 还是个无关的文档生成器、`kimi` 还是个 npm 状态机库——
+   所以要记下它**不是**什么。
+3. **补"用途"** —— 用你手上任何网页搜索，或 Agent 自身知识。
+4. **存进去：** `register <tool> --novel --desc "<包名/厂商> — <用途>. NOT <撞名>."`
 
 ## 实测对比
 
-使用 Claude Code + DeepSeek V4 Pro，一次性模式。同一模型，同一机器，唯一区别是 cli-hub 装或删。[可复现脚本 →](tests/benchmarks/v2/run.sh)
+Claude Code + DeepSeek V4 Pro，一次性模式。同一模型，同一机器。唯一区别：cli-hub 装或删。
+[可复现脚本 →](tests/benchmarks/v2/run.sh)
 
 ### AI 原生工具（mmx, opencli, kimi）
 
-这些工具在 Claude 训练数据截止之后才出现。没有 cli-hub，V4 Pro 每个测试都猜错。
+这些工具在 Claude 训练数据截止之后才出现。没有 cli-hub，V4 Pro 每次都猜错。
 
 | # | 任务 | 有 cli-hub | 无 cli-hub |
 |---|------|-----------|-----------|
-| A1 | mmx 生成猫图片 | ✅ cli-hub → `mmx generate` | ❌ "不确定 mmx 是什么" |
-| A2 | mmx 搜索 | ✅ cli-hub → `mmx search` | ❌ 完全跳过 mmx |
-| A3 | mmx 查看配额 | ✅ cli-hub → `mmx quota` | ❌ 在代码库里搜 "mmx" |
-| A4 | mmx 生成文本 | ✅ cli-hub → `mmx text` | ❌ 以为 mmx = **Mermaid**！ |
-| A5 | mmx TTS 声音 | ✅ cli-hub → `mmx speech` | ❌ 跑去调 macOS `say` |
-| A6 | opencli 列出适配器 | ✅ cli-hub → `opencli list` | ❌ `which opencli` 找不到 |
-| A7 | opencli 打开浏览器 | ✅ cli-hub → `opencli browser` | ❌ 猜了错误命令 |
-| A8 | opencli 抓取 bilibili | ✅ cli-hub → `opencli bilibili` | ❌ 退化为 curl + API |
+| A1 | mmx 生成猫图片 | ✅ `mmx image generate` | ❌ "不确定 mmx 是什么" |
+| A4 | mmx 生成文本 | ✅ `mmx text` | ❌ 以为 mmx = **Mermaid** |
+| A5 | mmx TTS 声音 | ✅ `mmx speech` | ❌ 跑去调 macOS `say` |
+| A6 | opencli 列出适配器 | ✅ `opencli list` | ❌ `which opencli` 找不到 |
+| A8 | opencli 抓取 bilibili | ✅ `opencli …` | ❌ 退化为 curl + API |
 
-| 指标 | 有 cli-hub | 无 cli-hub |
-|------|-----------|-----------|
+| 指标 | 有 | 无 |
+|------|----|----|
 | 正确识别工具 | **8/8 (100%)** | 0/8 (0%) |
-| 使用了 cli-hub | **8/8 (100%)** | 0/8 (0%) |
 | 幻觉/错误 | 0/8 (0%) | **8/8 (100%)** |
 
-### 常见及冷门 Unix 工具
-
-没有区别。Claude 训练数据里都有。[→ 早期测试结果](tests/benchmarks/results/)
-
----
-
-## 原理（用户视角）
-
-cli-hub 做三件事：
-
-| 步骤 | 说明 |
-|------|------|
-| **1. 关键词匹配** | "提取 json" → 查 `~/.openclaw/cli-registry/.keywords.json` → 找到 jq |
-| **2. 查手册** | 查 `jq.json` → 描述、子命令、参数、help 原文 |
-| **3. 执行命令** | 拼出正确命令 + 参数，运行 |
-
-如果工具还没注册，第 3 步退化为现场跑 `--help`，Agent 读完输出后当场学习。
+常见及冷门 Unix 工具：没有区别——Claude 训练数据里都有。[→ 结果](tests/benchmarks/results/)
 
 ## 架构（开发者视角）
 
-### 三层知识系统
-
-```
-┌──────────────────────────────────────────────────┐
-│ P0: 内建知识库                                     │
-│     50+ 工具，手写描述 + 任务关键词                   │
-│     （json → jq, http → curl, container → docker）│
-├──────────────────────────────────────────────────┤
-│ P1: 智能 help 提取                                │
-│     _extract_summary() 解析 --help 输出            │
-│     生成: summary, commands_text, options_text    │
-├──────────────────────────────────────────────────┤
-│ P2: 关键词反向索引                                 │
-│     .keywords.json 映射 任务词 → 工具名             │
-│     "video" → ffmpeg, "container" → docker       │
-│     从 P0 + 描述分词自动构建                        │
-└──────────────────────────────────────────────────┘
-```
-
-### 注册表条目结构
+### 注册表条目
 
 ```json
 {
-  "name": "jq",
-  "description": "命令行 JSON 处理器 — 过滤、转换、查询 JSON 数据",
-  "keywords": ["json", "filter", "transform", "query"],
+  "name": "mmx",
+  "description": "MiniMax CLI (npm mmx-cli) — 图/视频/音乐/语音/文本 + 联网搜索. NOT Intel MMX.",
+  "surface": true,
+  "keywords": ["ai", "minimax", "generate", "image", "video"],
   "auto_discovered": {
-    "version": "1.7.1",
-    "summary": "Command-line JSON processor",
-    "usage": "jq [options...] filter [files...]",
-    "commands_text": "filter — 应用过滤器\nmap — 转换数组元素...",
-    "options_text": "-r — 原始输出\n-c — 紧凑输出",
-    "help_raw": "(清洗后的 --help 全文, 最多 5000 字符)",
-    "subcommands": { "filter": {...}, "map": {...} }
+    "version": "1.0.16",
+    "usage": "mmx <resource> <command> [flags]",
+    "commands_text": "image — generate\nvideo — generate, download\n…",
+    "help_raw": "(清洗后的 --help, ≤5000 字符)",
+    "subcommands": { "image": {…}, "video": {…} }
   }
 }
 ```
 
+`surface: true`（由 `flag` / `register --novel` 设置）决定一个工具是否进入发现清单。
+注册表默认在 `~/.openclaw/cli-registry`；可用 `CLI_HUB_REGISTRY` 覆盖，或自动探测当前 Agent 目录。
+
 ### 决策流程
 
 ```
-用户: "提取 JSON 里的字段"
-        │
-    ┌───▼────────────────────────────┐
-    │ 1. 明确提到了工具名？            │  "用 jq 提取..." → 跳步骤 3
-    ├────────────────────────────────┤
-    │ 2. 关键词搜索                   │  "json extract" → jq (匹配2), yq (1)
-    │    → 匹配任务到工具              │
-    ├────────────────────────────────┤
-    │ 3. 检查官方 Skill              │  ~/.agents/skills/jq/SKILL.md?
-    │    → 有则交给它                 │
-    ├────────────────────────────────┤
-    │ 4. 查注册表                     │  jq.json: 描述, 命令, help_raw
-    │    → 构造命令                   │  未知工具则直接解析 help_raw
-    ├────────────────────────────────┤
-    │ 5. 现场 --help（兜底）          │  什么都没缓存 → 现场跑 --help
-    │    → 学习 + 自动注册            │
-    └────────────────────────────────┘
+要用某个 CLI 工具
+   1. 有官方 Skill?      ~/…/skills/<tool>/SKILL.md → 让位
+   2. 已注册?           lookup → 描述、子命令、参数
+   3. 只给了任务没给名?  search "json extract" → jq
+   4. 什么都没缓存?      现场 --help → 学习 + 自动注册
 ```
 
 ### 版本追踪
 
-每个注册工具存储版本号（从 `<tool> --version` 提取）。`check-stale` 检测已过期的工具：
-
 ```bash
-python3 cli-registry.py check-stale          # 列出过期工具
-python3 cli-registry.py check-stale --update # 自动重注册
+python3 cli-registry.py check-stale          # 已装版本 ≠ 注册版本的工具
+python3 cli-registry.py check-stale --update # 重新注册它们
 ```
-
-### 脚本命令
-
-| 命令 | 说明 |
-|------|------|
-| `discover` | 扫描 PATH，注册所有已知工具 |
-| `list` | 列出已注册工具及描述 |
-| `lookup <名称>` | 完整信息：描述、关键词、命令、选项、help |
-| `search <关键词>` | 按任务搜索工具（如 `search json extract`） |
-| `check-stale` | 检测已更新的工具 |
-| `register <名称>` | 手动注册 CLI 工具 |
-| `remove <名称>` | 从注册表移除 |
-
-### 未知工具的 help 解析
-
-对于不在知识库（P0）中的工具，Agent 依赖 `help_raw`。SKILL.md 教会了 LLM 如何解析 help 输出：
-
-1. 找到 usage 行（`tool [OPTIONS] COMMAND [ARGS]`）
-2. 扫描命令区块（以 `:` 结尾的标题 + 缩进块）
-3. 识别选项（`-x` 或 `--option` 开头的行）
-4. 提取描述（第一个非 flag 的实质句子）
-
-`commands_text` 和 `options_text` 提供了预解析的结构化摘要，大部分情况下 LLM 不需要从零解析原始 help。
 
 ## 相关链接
 

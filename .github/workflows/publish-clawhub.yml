@@ -23,6 +23,6 @@ jobs:
         run: npm install -g clawhub
 
       - name: Publish to ClawHub
-        run: clawhub sync --all --yes
+        run: clawhub sync --all
         env:
           CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}

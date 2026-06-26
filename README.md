@@ -1,35 +1,27 @@
 # cli-hub
 
-> One Skill. Every CLI tool on your system. Zero config.
+> One skill so your agent can use every CLI on your machine — **including the ones it's never heard of.**
+
+[中文版 →](README_CN.md)
+
+Your agent knows `git` and `docker`. It does **not** know the CLI you installed
+last week, or any tool released after its training cut-off — so it hallucinates
+flags, guesses the wrong tool, or just gives up. cli-hub fixes that by giving the
+agent a small, local registry of the tools *you actually have*, and (optionally)
+pushing the right entry into its context at the right moment.
 
 ```mermaid
 graph LR
-    CH["🔄 cli-hub<br/>One Skill<br/>All CLIs"] --> git["🔀 git"]
-    CH --> gh["🐙 gh"]
-    CH --> docker["🐳 docker"]
-    CH --> kubectl["☸️ kubectl"]
-    CH --> ffmpeg["🎬 ffmpeg"]
-    CH --> jq["🧩 jq"]
-    CH --> curl["🌐 curl"]
-    CH --> rg["🔎 rg"]
-    CH --> python3["🐍 python3"]
-    CH --> node["💚 node"]
-    CH --> ssh["🔐 ssh"]
-    CH --> more["📦 +50 more"]
+    CH["🔄 cli-hub<br/>one skill<br/>your machine's CLIs"] --> known["✅ git / jq / docker<br/>(agent already knows)"]
+    CH --> novel["🆕 mmx / kimi / your-tool<br/>(agent does NOT know)"]
+    novel --> disc["discovery: 'this exists'"]
+    novel --> use["usage: subcommands + flags"]
 
     style CH fill:#4f46e5,color:#fff,stroke:#312e81
-    style git fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style gh fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style docker fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style kubectl fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style ffmpeg fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style jq fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style curl fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style rg fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style python3 fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style node fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style ssh fill:#f0fdf4,stroke:#22c55e,color:#166534
-    style more fill:#fef3c7,stroke:#f59e0b,color:#92400e
+    style known fill:#f0fdf4,stroke:#22c55e,color:#166534
+    style novel fill:#fef3c7,stroke:#f59e0b,color:#92400e
+    style disc fill:#eef2ff,stroke:#6366f1,color:#3730a3
+    style use fill:#eef2ff,stroke:#6366f1,color:#3730a3
 ```
 
 ## Install
@@ -38,215 +30,152 @@ graph LR
 npx skills add dull-bird/cli-hub
 ```
 
-Done. Your AI agent now knows how to use any CLI tool on your system.
-
 Works on 55+ agents: OpenClaw, Claude Code, Cursor, Gemini CLI, Copilot, Windsurf, Warp, and more.
 
-## Use
+## Two ways it works
 
-After installing, warm up the registry by asking your agent:
+**1. Pull (default, every agent).** When the agent goes to use a tool, the skill
+tells it to consult the local registry first — real subcommands and flags instead
+of guesses. If a tool isn't registered yet, it falls back to live `--help` and
+learns on the spot.
 
-```
- 👤  "scan my system and register all CLI tools you can find"
- 🤖  [cli-hub: discover → registered 37 tools]
-     Done. Found git, docker, curl, python3...
-
- 👤  "register my-tool so you know how to use it"
- 🤖  [cli-hub: register my-tool → 5 subcommands, 12 flags]
-     Registered.
-```
-
-Then talk normally:
-
-```
- 👤  "how many uncompleted todos are in data.json?"
- 🤖  [cli-hub: search "json count filter" → jq]
-     [cli-hub: jq has 15 commands, keywords: json, filter, transform]
-     > jq '[.[] | select(.completed==false)] | length' data.json
-     3
-
- 👤  "what containers are running?"
- 🤖  [cli-hub: search "container running" → docker]
-     [cli-hub: docker has 36 commands, keywords: container, image, run]
-     > docker ps
-     CONTAINER ID  IMAGE         STATUS       NAMES
-     a1b2c3d4e5f6  nginx:latest  Up 2 hours   web
-
- 👤  "switch to Japan proxy"
- 🤖  [cli-hub: mihomo/SKILL.md found — official skill]
-     [defers to official skill]
-     ✓ Switched to Japan 1 | SS | ZJ
-```
-
-Tools are discovered on first mention and cached automatically.
-
-> 💡 **Tip:** ask your agent to "register <tool>" for niche or recently-installed tools — it'll learn their subcommands and flags immediately.
-
-## Proactive mode (Claude Code) — optional
-
-Out of the box, the agent has to *remember* to consult cli-hub. On Claude Code you
-can flip it to *automatic* — the registry reaches the agent on its own:
+**2. Push (Claude Code, optional).** Flip it from *pull* to *automatic* so the
+registry reaches the agent on its own — no reliance on it remembering:
 
 ```bash
-python3 scripts/install-hooks.py      # installs two hooks; --uninstall to remove
+python3 scripts/install-hooks.py        # --uninstall to remove
 ```
 
-| When | What happens |
-|------|--------------|
-| **You send a message** | The agent is quietly told which **unfamiliar** CLI tools are installed on *this* machine — so it can reach for `mmx` / `opencli` / your own tools instead of saying "I can't do that." |
-| **Right before a command runs** | If the command uses one of those tools, its subcommands and flags are injected first — so the agent uses it correctly on the first try. |
+| Moment | Hook | What it injects |
+|--------|------|-----------------|
+| You send a message | `UserPromptSubmit` | The list of **unfamiliar** tools installed on *this* machine — so the agent reaches for `mmx` / your-tool instead of saying "I can't." Once per session. |
+| Right before a command runs | `PreToolUse(Bash)` | The **usage** (subcommands/flags) of any unfamiliar tool in that command. Once per tool per session. |
 
 Both hooks are non-blocking (they only add context) and only fire for tools the
-model **doesn't already know** — common tools like `git` and `docker` cost nothing.
+model **doesn't already know** — `git`, `docker`, `jq` cost zero context.
 
-The list is built from *your* machine, not a hardcoded one. cli-hub ships knowing
-its AI-native tools (`mmx`, `opencli`); mark your own with one command:
+## Quick start
 
 ```bash
-python3 scripts/cli-registry.py flag <tool>        # surface it
-python3 scripts/cli-registry.py non-standard       # preview the manifest
+S=~/.agents/skills/cli-hub/scripts/cli-registry.py   # path varies by agent
+
+python3 $S discover                  # scan PATH, register what's there
+python3 $S flag mmx                  # mark a tool the model doesn't know
+python3 $S non-standard              # preview the discovery manifest
+python3 ~/.agents/skills/cli-hub/scripts/install-hooks.py   # (Claude Code) go automatic
 ```
 
----
+Or just talk to your agent: *"scan my system and register my CLI tools"*,
+*"flag mmx and kimi so you know they exist"*.
+
+> 💡 The discovery list is built from **your** machine. cli-hub ships knowing
+> nothing about which tools you run — you decide what surfaces with `flag`.
+
+## Commands
+
+| Command | Use |
+|---------|-----|
+| `discover` | Scan PATH; register known + quality-filtered tools |
+| `list` | List registered tools |
+| `lookup <name>` | Full info: description, keywords, subcommands, flags, help |
+| `search <kw...>` | Find a tool by task (e.g. `search json extract`) |
+| `non-standard` | List installed tools the model likely doesn't know (the manifest) |
+| `flag <name> [--off]` | Mark / unmark a tool as novel (surface it) |
+| `register <name> [--novel] [--desc "…"]` | Register a tool; `--novel` surfaces it |
+| `hint <name>` | Compact usage hint for one novel tool (used by hooks) |
+| `check-stale [--update]` | Detect / re-register tools whose version changed |
+| `remove <name>` | Remove from registry |
+
+## Design principles
+
+- **The registry is the database.** cli-hub never fetches anything at runtime; the
+  hooks and lookups only read local JSON. Zero network.
+- **"Novel" is opt-in, never inferred.** A raw PATH scan registers hundreds of
+  system binaries — so a tool only surfaces if you `flag` it (or it carries a
+  built-in `novel` mark). No noise.
+- **Ships no opinion about you.** No hardcoded list of *your* tools, and no bound
+  search engine. The product only *stores* descriptions; *researching* them is the
+  agent's job, with whatever tools and knowledge it has.
+- **Defers to official skills.** If `~/…/skills/<tool>/SKILL.md` exists, cli-hub
+  steps aside — the author knows their tool best.
+
+## Building accurate entries (research recipe)
+
+Auto-extracted `--help` summaries are often vague or wrong. To curate a real
+description — provider-agnostic, no specific search engine assumed:
+
+1. **Read the tool** — `<tool> --help`, `<tool> --version`.
+2. **Confirm identity / version / name collisions from the package manager**
+   (`npm view <pkg>`, `curl https://pypi.org/pypi/<pkg>/json`). Many binary names
+   collide — `codex` is also an unrelated docs generator, `kimi` an npm state
+   library — so record what the tool is **not**.
+3. **Fill in purpose** with any web search you have, or the agent's own knowledge.
+4. **Store it:** `register <tool> --novel --desc "<package/vendor> — <what>. NOT <collision>."`
 
 ## Benchmarks
 
-Tested with Claude Code + DeepSeek V4 Pro, one-shot mode. Same model, same machine. Only difference: cli-hub installed or fully removed. [Reproducible script →](tests/benchmarks/v2/run.sh)
+Claude Code + DeepSeek V4 Pro, one-shot mode. Same model, same machine. Only
+difference: cli-hub installed or fully removed. [Reproducible script →](tests/benchmarks/v2/run.sh)
 
 ### AI-native tools (mmx, opencli, kimi)
 
-These tools post-date Claude's training data. Without cli-hub, V4 Pro guesses wrong on every single test.
+These post-date Claude's training data. Without cli-hub, V4 Pro guesses wrong every time.
 
 | # | Task | With cli-hub | Without cli-hub |
 |---|------|-------------|-----------------|
-| A1 | mmx 生成猫图片 | ✅ cli-hub → `mmx generate` | ❌ "不确定 mmx 是什么" |
-| A2 | mmx 搜索 | ✅ cli-hub → `mmx search` | ❌ skipped mmx entirely |
-| A3 | mmx 查看配额 | ✅ cli-hub → `mmx quota` | ❌ searched codebase for "mmx" |
-| A4 | mmx 生成文本 | ✅ cli-hub → `mmx text` | ❌ thought mmx = **Mermaid**! |
-| A5 | mmx TTS 声音 | ✅ cli-hub → `mmx speech` | ❌ ran macOS `say` instead |
-| A6 | opencli 列出适配器 | ✅ cli-hub → `opencli list` | ❌ `which opencli` not found |
-| A7 | opencli 打开浏览器 | ✅ cli-hub → `opencli browser` | ❌ guessed wrong tool |
-| A8 | opencli 抓取 bilibili | ✅ cli-hub → `opencli bilibili` | ❌ fell back to curl + API |
+| A1 | generate a cat image with mmx | ✅ `mmx image generate` | ❌ "not sure what mmx is" |
+| A4 | generate text with mmx | ✅ `mmx text` | ❌ thought mmx = **Mermaid** |
+| A5 | TTS with mmx | ✅ `mmx speech` | ❌ ran macOS `say` instead |
+| A6 | list opencli adapters | ✅ `opencli list` | ❌ `which opencli` → not found |
+| A8 | scrape bilibili via opencli | ✅ `opencli …` | ❌ fell back to curl + API |
 
-| Metric | With cli-hub | Without cli-hub |
-|--------|-------------|-----------------|
+| Metric | With | Without |
+|--------|------|---------|
 | Correct tool identified | **8/8 (100%)** | 0/8 (0%) |
-| Used cli-hub skill | **8/8 (100%)** | 0/8 (0%) |
 | Hallucinated / wrong | 0/8 (0%) | **8/8 (100%)** |
 
-### Common & niche Unix tools
+Common & niche Unix tools: no difference — Claude already knows them. [→ results](tests/benchmarks/results/)
 
-No difference. Claude's training data covers these. [→ earlier results](tests/benchmarks/results/)
+## Architecture (developers)
 
----
-
-## How it works (for users)
-
-cli-hub does three things:
-
-| Step | What happens |
-|------|-------------|
-| **1. Keyword match** | "extract json" → search `~/.openclaw/cli-registry/.keywords.json` → finds jq |
-| **2. Read the manual** | Looks up `jq.json` → description, subcommands, options, help text |
-| **3. Run the command** | Constructs the right command with the right flags |
-
-If a tool isn't in the registry yet, step 3 falls back to running `<tool> --help` live. The agent reads the output and learns on the spot.
-
-## Architecture (for developers)
-
-### Three-layer knowledge system
-
-```
-┌──────────────────────────────────────────────────┐
-│ P0: Built-in knowledge base                       │
-│     50+ tools with hand-written descriptions      │
-│     and task keywords (json → jq, http → curl)    │
-│     → "External CLI: jq" → "Lightweight JSON... │
-├──────────────────────────────────────────────────┤
-│ P1: Smart help extraction                        │
-│     _extract_summary() parses --help output      │
-│     to auto-generate descriptions                │
-│     Also stores: commands_text, options_text      │
-├──────────────────────────────────────────────────┤
-│ P2: Keyword reverse index                        │
-│     .keywords.json maps tasks → tools            │
-│     "video" → ffmpeg, "container" → docker       │
-│     Auto-built from P0 + description tokens       │
-└──────────────────────────────────────────────────┘
-```
-
-### Registry entry structure
+### Registry entry
 
 ```json
 {
-  "name": "jq",
-  "description": "Lightweight command-line JSON processor",
-  "keywords": ["json", "filter", "transform", "query"],
+  "name": "mmx",
+  "description": "MiniMax CLI (npm mmx-cli) — image/video/music/speech/text + web search. NOT Intel MMX.",
+  "surface": true,
+  "keywords": ["ai", "minimax", "generate", "image", "video"],
   "auto_discovered": {
-    "version": "1.7.1",
-    "summary": "Command-line JSON processor",
-    "usage": "jq [options...] filter [files...]",
-    "commands_text": "filter — Apply a filter to the input\nmap — Transform...",
-    "options_text": "-r — Raw output\n-c — Compact output",
-    "help_raw": "(cleaned --help output, max 5000 chars)",
-    "subcommands": { "filter": {...}, "map": {...} }
+    "version": "1.0.16",
+    "usage": "mmx <resource> <command> [flags]",
+    "commands_text": "image — generate\nvideo — generate, download\n…",
+    "help_raw": "(cleaned --help, ≤5000 chars)",
+    "subcommands": { "image": {…}, "video": {…} }
   }
 }
 ```
 
+`surface: true` (set by `flag` / `register --novel`) is what puts a tool in the
+discovery manifest. The registry lives at `~/.openclaw/cli-registry` by default;
+override with `CLI_HUB_REGISTRY`, or it auto-detects the host agent's directory.
+
 ### Decision flow
 
 ```
-User: "extract JSON fields from data.json"
-        │
-    ┌───▼────────────────────────────┐
-    │ 1. Tool mentioned explicitly?  │  "use jq to..." → go to step 3
-    ├────────────────────────────────┤
-    │ 2. Keyword search              │  "json extract" → jq (2 hits), yq (1)
-    │    → matches tool to task      │
-    ├────────────────────────────────┤
-    │ 3. Official skill check        │  ~/.agents/skills/jq/SKILL.md?
-    │    → defer if exists           │
-    ├────────────────────────────────┤
-    │ 4. Registry lookup             │  jq.json: description, commands, help_raw
-    │    → construct command         │  If unknown tool: parse help_raw directly
-    ├────────────────────────────────┤
-    │ 5. Live --help (fallback)      │  Nothing cached → run --help now
-    │    → learn + auto-register     │
-    └────────────────────────────────┘
+Use a CLI tool
+   1. Official skill?      ~/…/skills/<tool>/SKILL.md → defer
+   2. Registered?         lookup → description, subcommands, flags
+   3. Task, no tool named? search "json extract" → jq
+   4. Nothing cached?     live --help → learn + auto-register
 ```
 
 ### Version tracking
 
-Every registered tool stores its version (extracted from `<tool> --version`). Run `check-stale` to find tools that have been updated since registration:
-
 ```bash
-python3 cli-registry.py check-stale          # show stale tools
-python3 cli-registry.py check-stale --update # auto re-register
+python3 cli-registry.py check-stale          # tools whose installed ≠ registered version
+python3 cli-registry.py check-stale --update # re-register them
 ```
-
-### CLI reference
-
-| Command | Description |
-|---------|-------------|
-| `discover` | Scan PATH, register all known binaries |
-| `list` | Show all registered tools with descriptions |
-| `lookup <name>` | Full tool info: description, keywords, commands, options, help |
-| `search <keyword...>` | Find tools by task (e.g. `search json extract`) |
-| `check-stale` | Detect tools that have been updated |
-| `register <name>` | Manually register a CLI tool |
-| `remove <name>` | Remove from registry |
-
-### Help parsing for unknown tools
-
-When a tool is not in the knowledge base (P0), the agent relies on `help_raw` — the tool's own `--help` output. The SKILL.md teaches the LLM how to parse help text:
-
-1. Find the usage line (`tool [OPTIONS] COMMAND [ARGS]`)
-2. Scan for command sections (headings ending with `:` followed by indented blocks)
-3. Identify options (lines starting with `-x` or `--option`)
-4. Extract the summary (first descriptive line)
-
-`commands_text` and `options_text` provide pre-parsed structured summaries, so the LLM rarely needs to parse raw help from scratch.
 
 ## Related
 
