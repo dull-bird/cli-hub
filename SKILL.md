@@ -91,13 +91,14 @@ fi
 
 | Command | Use |
 |---------|-----|
-| `python3 $SCRIPT register <cli> [--binary <bin>] [--desc <text>]` | Register a CLI tool |
+| `python3 $SCRIPT register <cli> [--binary <bin>] [--desc <text>] [--novel]` | Register a CLI tool (`--novel`: model likely doesn't know it) |
 | `python3 $SCRIPT list [--format json]` | List all registered tools |
 | `python3 $SCRIPT lookup <cli>` | Show structured info (desc, subcommands, flags, keywords, help) |
 | `python3 $SCRIPT search <keyword...>` | Find tools by task keywords (e.g. "json filter") |
 | `python3 $SCRIPT discover` | Auto-scan system for known binaries |
-| `python3 $SCRIPT remove <cli>` | Remove from registry |
-| `python3 $SCRIPT help <cli>` | Fetch live `--help` output |
+| `python3 $SCRIPT non-standard [--format json]` | List installed tools the model likely doesn't know (discovery manifest) |
+| `python3 $SCRIPT hint <cli>` | Compact usage hint for one novel tool (used by hooks) |
+| `python3 $SCRIPT flag <cli> [--off]` | Mark/unmark a tool as novel (surface it in the manifest) |
 | `python3 $SCRIPT remove <cli>` | Remove from registry |
 | `python3 $SCRIPT help <cli>` | Live `--help` dump (registered or not) |
 
@@ -224,6 +225,53 @@ User: "用 fq 解析这个二进制文件"
 → READ help_raw to learn subcommands and options
 → Construct command from help_raw
 ```
+
+## Proactive mode (Claude Code hooks)
+
+By default this skill is *pull*-based: the agent must remember to look a tool up.
+For Claude Code you can make it *push*-based so the registry reaches the agent
+automatically, with no reliance on it remembering:
+
+```bash
+python3 scripts/install-hooks.py          # ~/.claude/settings.json
+python3 scripts/install-hooks.py --project # ./.claude/settings.json
+python3 scripts/install-hooks.py --uninstall
+```
+
+This installs two non-blocking hooks (they only add context, never deny):
+
+| Hook | When | What it injects |
+|------|------|-----------------|
+| `UserPromptSubmit` | You send a message | The **non-standard tool manifest** — installed tools the model likely doesn't know exist. Solves "I didn't know `mmx` could do that." Once per session. |
+| `PreToolUse(Bash)` | Right before a command runs | The **usage hint** for any novel tool in the command (subcommands/flags). Once per tool per session. |
+
+Only tools flagged **novel** surface (KB `novel` entries like `mmx`/`opencli`, plus
+anything you `flag`), so well-known tools (git, jq, docker…) cost zero context.
+Tell the user to mark their own tools: `register <tool> --novel` or `flag <tool>`.
+
+## Building accurate entries (research recipe)
+
+Auto-extracted `--help` summaries are often vague or wrong (a banner, a stray
+sentence). For any tool you surface to the agent, curate a real description.
+This recipe is **provider-agnostic** — use whatever the host has; never assume a
+specific search engine:
+
+1. **Read the tool** — `<tool> --help` and `<tool> --version`. If the help
+   states the purpose clearly, you may already be done.
+2. **Confirm identity + version + name collisions from the package manager**
+   (most reliable, needs no web search):
+   - npm: `npm view <pkg> version bin description`
+   - PyPI: `curl -s https://pypi.org/pypi/<pkg>/json`
+   - Check the **bare binary name** too (`npm view <bin>`): names collide often
+     — e.g. `codex` is also an unrelated docs generator, `kimi` an npm state
+     library. Record what the tool is NOT, to stop the agent confusing them.
+3. **Fill in purpose** using any web search the host happens to have, or the
+   agent's own knowledge. Do not hardcode a provider.
+4. **Store it** — the only step cli-hub owns:
+   `register <tool> --novel --desc "<package/vendor> — <what it does>. NOT <collision>."`
+
+The registry is the database. cli-hub never fetches anything at runtime, and
+ships no opinion about which tools you run or which search engine you use.
 
 ## Design Principle
 

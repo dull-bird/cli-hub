@@ -82,6 +82,31 @@ Tools are discovered on first mention and cached automatically.
 
 > 💡 **Tip:** ask your agent to "register <tool>" for niche or recently-installed tools — it'll learn their subcommands and flags immediately.
 
+## Proactive mode (Claude Code) — optional
+
+Out of the box, the agent has to *remember* to consult cli-hub. On Claude Code you
+can flip it to *automatic* — the registry reaches the agent on its own:
+
+```bash
+python3 scripts/install-hooks.py      # installs two hooks; --uninstall to remove
+```
+
+| When | What happens |
+|------|--------------|
+| **You send a message** | The agent is quietly told which **unfamiliar** CLI tools are installed on *this* machine — so it can reach for `mmx` / `opencli` / your own tools instead of saying "I can't do that." |
+| **Right before a command runs** | If the command uses one of those tools, its subcommands and flags are injected first — so the agent uses it correctly on the first try. |
+
+Both hooks are non-blocking (they only add context) and only fire for tools the
+model **doesn't already know** — common tools like `git` and `docker` cost nothing.
+
+The list is built from *your* machine, not a hardcoded one. cli-hub ships knowing
+its AI-native tools (`mmx`, `opencli`); mark your own with one command:
+
+```bash
+python3 scripts/cli-registry.py flag <tool>        # surface it
+python3 scripts/cli-registry.py non-standard       # preview the manifest
+```
+
 ---
 
 ## Benchmarks

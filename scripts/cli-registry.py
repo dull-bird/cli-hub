@@ -25,8 +25,28 @@ import fnmatch
 from datetime import datetime
 from pathlib import Path
 
-VERSION = "1.2.0"
-REGISTRY_DIR = Path.home() / ".openclaw" / "cli-registry"
+VERSION = "1.3.0"
+
+
+def _default_registry_dir():
+    """Resolve the registry location.
+
+    Priority:
+      1. CLI_HUB_REGISTRY env var (lets hooks/agents pin a shared registry)
+      2. The first host-agent registry dir that already exists
+      3. OpenClaw default (back-compat)
+    """
+    env = os.environ.get("CLI_HUB_REGISTRY")
+    if env:
+        return Path(env).expanduser()
+    for base in (".openclaw", ".claude", ".cursor", ".codex"):
+        cand = Path.home() / base / "cli-registry"
+        if cand.is_dir():
+            return cand
+    return Path.home() / ".openclaw" / "cli-registry"
+
+
+REGISTRY_DIR = _default_registry_dir()
 SKILLS_DIR = Path.home() / ".agents" / "skills"
 KEYWORD_INDEX_PATH = REGISTRY_DIR / ".keywords.json"
 
@@ -346,11 +366,6 @@ KNOWN_CLI_KB = {
         "keywords": ["list", "directory", "file", "ls", "tree", "color"],
         "category": "file-management",
     },
-    "opencli": {
-        "desc": "OpenClaw CLI — manage the OpenClaw AI agent gateway",
-        "keywords": ["openclaw", "agent", "ai", "gateway", "skill", "plugin"],
-        "category": "ai-tools",
-    },
     "code": {
         "desc": "Visual Studio Code editor — open files, folders, and manage extensions",
         "keywords": ["editor", "code", "vscode", "ide", "file", "diff", "extension"],
@@ -360,11 +375,6 @@ KNOWN_CLI_KB = {
         "desc": "Clash meta kernel — proxy and network routing (official skill exists)",
         "keywords": ["proxy", "mihomo", "clash", "vpn", "node", "routing", "network", "switch"],
         "category": "networking",
-    },
-    "mmx": {
-        "desc": "MiniMax multimodal AI toolkit — generate images, video, music, documents",
-        "keywords": ["ai", "minimax", "generate", "image", "video", "music", "document", "multimodal"],
-        "category": "ai-tools",
     },
     "clang": {
         "desc": "C language family compiler frontend — compile C/C++/Objective-C",
@@ -952,6 +962,8 @@ def cmd_register(args):
         "keywords": keywords,
         "auto_discovered": info,
     }
+    if getattr(args, "novel", False):
+        entry["surface"] = True
 
     REGISTRY_DIR.mkdir(parents=True, exist_ok=True)
     path = REGISTRY_DIR / "{}.json".format(name)
@@ -1333,6 +1345,106 @@ def cmd_check_stale(args):
     else:
         print("All up to date.")
 
+# ── Discovery surface (which tools the model likely doesn't know) ──
+
+def _load_entry(name):
+    p = REGISTRY_DIR / "{}.json".format(name)
+    if not p.is_file():
+        return None
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _iter_registry():
+    for p in sorted(REGISTRY_DIR.glob("*.json")):
+        if p.stem.startswith("."):
+            continue
+        try:
+            yield p.stem, json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+
+
+def _is_novel(name, entry=None):
+    """True for tools the base model likely does NOT know, worth surfacing.
+
+    Sources are deliberately opt-in/curated — never inferred from mere absence
+    in the KB, because a raw PATH scan registers lots of system noise:
+      - KB entries flagged "novel" (AI-native tools cli-hub ships knowledge for)
+      - registry entries flagged "surface" (user ran `register --novel` / `flag`)
+    """
+    if name in UNIX_BASICS:
+        return False
+    kb = KNOWN_CLI_KB.get(name)
+    if kb and kb.get("novel"):
+        return True
+    if entry is None:
+        entry = _load_entry(name)
+    return bool(entry and entry.get("surface"))
+
+
+def cmd_non_standard(args):
+    """List installed tools the base model likely doesn't know (for discovery).
+
+    Compact by design — meant to be injected into an agent's context so it
+    knows these tools exist. Silent when there is nothing to surface.
+    """
+    rows = sorted((name, (entry.get("description") or "").strip())
+                  for name, entry in _iter_registry() if _is_novel(name, entry))
+
+    if args.format == "json":
+        print(json.dumps([{"name": n, "description": d} for n, d in rows],
+                         indent=2, ensure_ascii=False))
+        return
+    for name, desc in rows:
+        print("{} — {}".format(name, desc) if desc else name)
+
+
+def cmd_hint(args):
+    """Compact one-tool usage hint for hook injection.
+
+    Exits 1 (silent) unless the tool is registered AND novel, so we never
+    spend context reminding the model about tools it already knows.
+    """
+    name = args.cli
+    entry = _load_entry(name)
+    if entry is None or (not args.force and not _is_novel(name, entry)):
+        sys.exit(1)
+
+    ad = entry.get("auto_discovered", {})
+    lines = ["{} — {}".format(name, (entry.get("description") or "").strip())]
+    usage = (ad.get("usage") or "").strip().split("\n")[0][:160]
+    # Skip ASCII-art banners / decoration: keep only text-like usage lines.
+    if usage and sum(c.isalnum() or c.isspace() for c in usage) / len(usage) > 0.6:
+        lines.append("usage: {}".format(usage))
+    commands = (ad.get("commands_text") or "").strip()
+    if commands:
+        cmds = [c.split(" — ")[0].strip() for c in commands.splitlines() if c.strip()]
+        if cmds:
+            lines.append("subcommands: {}".format(", ".join(cmds[:20])))
+    if entry.get("official_skill"):
+        lines.append("(official skill: {})".format(entry["official_skill"]))
+    print("\n".join(lines))
+
+
+def cmd_flag(args):
+    """Mark/unmark a registered tool as novel (surfaced in the manifest)."""
+    name = args.cli
+    entry = _load_entry(name)
+    if entry is None:
+        print("Not registered: {} (run: register {} first)".format(name, name))
+        sys.exit(1)
+    if args.off:
+        entry.pop("surface", None)
+    else:
+        entry["surface"] = True
+    (REGISTRY_DIR / "{}.json".format(name)).write_text(
+        json.dumps(entry, indent=2, ensure_ascii=False), encoding="utf-8")
+    print("Surface flag {} for {}".format("OFF" if args.off else "ON", name))
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="CLI Registry for cli-hub AgentSkill",
@@ -1348,6 +1460,8 @@ def main():
     p.add_argument("--desc", help="Description (override auto-detection)")
     p.add_argument("--force", action="store_true",
                    help="Register even if binary not on PATH")
+    p.add_argument("--novel", action="store_true",
+                   help="Mark as a tool the model likely doesn't know (surface in discovery manifest)")
 
     p = sub.add_parser("list", help="List registered CLIs")
     p.add_argument("--format", default="table", choices=["table", "json"])
@@ -1379,6 +1493,19 @@ def main():
     p = sub.add_parser("help", help="Fetch live --help output")
     p.add_argument("cli", help="CLI name or binary")
 
+    p = sub.add_parser("non-standard",
+                       help="List installed tools the model likely doesn't know")
+    p.add_argument("--format", default="text", choices=["text", "json"])
+
+    p = sub.add_parser("hint", help="Compact usage hint for one novel tool (for hooks)")
+    p.add_argument("cli", help="CLI name")
+    p.add_argument("--force", action="store_true",
+                   help="Emit even if the tool isn't flagged novel")
+
+    p = sub.add_parser("flag", help="Mark a registered tool as novel (surface in manifest)")
+    p.add_argument("cli", help="CLI name")
+    p.add_argument("--off", action="store_true", help="Unset the novel flag")
+
     args = parser.parse_args()
     {
         "register": cmd_register,
@@ -1389,6 +1516,9 @@ def main():
         "remove": cmd_remove,
         "help": cmd_help_cli,
         "check-stale": cmd_check_stale,
+        "non-standard": cmd_non_standard,
+        "hint": cmd_hint,
+        "flag": cmd_flag,
     }[args.command](args)
 
 
