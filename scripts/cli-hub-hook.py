@@ -85,15 +85,17 @@ def _candidate_tools(command):
 
 
 def handle_user_prompt(data):
+    if not _seen(data.get("session_id", ""), "__session__"):
+        sys.exit(0)  # only the first prompt of a session does the work
+    # Pick up tools installed since last time (cheap unless PATH changed).
+    _registry("autodiscover", timeout=20)
     code, out = _registry("non-standard", "--format", "text")
-    if code != 0 or not out:
-        sys.exit(0)
-    if not _seen(data.get("session_id", ""), "__manifest__"):
-        sys.exit(0)  # already injected this session
-    _emit("UserPromptSubmit",
-          "This machine has these non-standard CLI tools installed that you "
-          "likely don't know from training. Consider them when they fit the "
-          "user's request; verify exact usage before running:\n" + out)
+    if code == 0 and out:
+        _emit("UserPromptSubmit",
+              "This machine has these non-standard CLI tools installed that you "
+              "likely don't know from training. Consider them when they fit the "
+              "user's request; verify exact usage before running:\n" + out)
+    sys.exit(0)
 
 
 def handle_pre_tool(data):

@@ -1429,6 +1429,99 @@ def cmd_hint(args):
     print("\n".join(lines))
 
 
+PATH_SEEN = REGISTRY_DIR / ".path-seen.json"
+
+
+def _path_binaries():
+    """name -> resolved path for executables on PATH (first match wins)."""
+    found = {}
+    for d in os.environ.get("PATH", "").split(os.pathsep):
+        p = Path(d)
+        if not p.is_dir():
+            continue
+        try:
+            for e in p.iterdir():
+                name = e.name
+                if name in found or not re.match(r'^[a-z][a-z0-9._-]+$', name):
+                    continue
+                if e.is_file() and os.access(str(e), os.X_OK):
+                    found[name] = str(e)
+        except PermissionError:
+            continue
+    return found
+
+
+def _under_home(path):
+    """True if the binary lives under $HOME (i.e. user-installed, not system)."""
+    try:
+        return str(Path(path).resolve()).startswith(str(Path.home().resolve()) + os.sep)
+    except Exception:
+        return False
+
+
+def cmd_autodiscover(args):
+    """Incremental discovery for hooks: register only newly-appeared binaries,
+    auto-surfacing the user-installed ones. Cheap on the common (no-change) path.
+
+    A tool is auto-surfaced (flagged novel) when it is installed under $HOME,
+    not in the built-in KB (so the model probably doesn't know it), and has a
+    real description. System binaries (/usr/bin ...) are registered but never
+    auto-surfaced. Override any guess with `flag <tool> [--off]`.
+    """
+    current = _path_binaries()
+    names = sorted(current)
+
+    prev = None
+    if PATH_SEEN.is_file():
+        try:
+            prev = set(json.loads(PATH_SEEN.read_text(encoding="utf-8")))
+        except Exception:
+            prev = None
+
+    REGISTRY_DIR.mkdir(parents=True, exist_ok=True)
+    PATH_SEEN.write_text(json.dumps(names, ensure_ascii=False), encoding="utf-8")
+
+    if prev is None:
+        print("Baseline recorded ({} binaries on PATH).".format(len(names)))
+        return
+
+    new = [n for n in names if n not in prev]
+    if not new:
+        if args.verbose:
+            print("No new tools on PATH.")
+        return
+
+    registered, surfaced = 0, []
+    for name in new:
+        if name in UNIX_BASICS or (REGISTRY_DIR / "{}.json".format(name)).is_file():
+            continue
+        if any(fnmatch.fnmatch(name, pat) for pat in _SYSTEM_NOISE_PATTERNS):
+            continue
+        path = current[name]
+        info = _extract_help(path)
+        if _is_noise_help(info.get("help_raw", "")) or \
+                _score_tool_quality(info) < _MIN_QUALITY_SCORE:
+            continue
+        auto = _under_home(path) and name not in KNOWN_CLI_KB
+        cmd_register(argparse.Namespace(
+            cli=name, binary=path, desc="", force=False, novel=auto))
+        registered += 1
+        if auto:
+            entry = _load_entry(name)
+            real = entry and not entry.get("description", "").startswith("External CLI:")
+            if real:
+                surfaced.append(name)
+            elif entry:  # thin description — don't surface noise
+                entry.pop("surface", None)
+                (REGISTRY_DIR / "{}.json".format(name)).write_text(
+                    json.dumps(entry, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    if registered:
+        _save_keyword_index()
+    print("Auto-registered {} new tool(s){}.".format(
+        registered, ("; surfaced: " + ", ".join(surfaced)) if surfaced else ""))
+
+
 def cmd_flag(args):
     """Mark/unmark a registered tool as novel (surfaced in the manifest)."""
     name = args.cli
@@ -1497,6 +1590,10 @@ def main():
                        help="List installed tools the model likely doesn't know")
     p.add_argument("--format", default="text", choices=["text", "json"])
 
+    p = sub.add_parser("autodiscover",
+                       help="Incrementally register newly-appeared PATH tools (for hooks)")
+    p.add_argument("--verbose", action="store_true")
+
     p = sub.add_parser("hint", help="Compact usage hint for one novel tool (for hooks)")
     p.add_argument("cli", help="CLI name")
     p.add_argument("--force", action="store_true",
@@ -1517,6 +1614,7 @@ def main():
         "help": cmd_help_cli,
         "check-stale": cmd_check_stale,
         "non-standard": cmd_non_standard,
+        "autodiscover": cmd_autodiscover,
         "hint": cmd_hint,
         "flag": cmd_flag,
     }[args.command](args)

@@ -96,6 +96,7 @@ fi
 | `python3 $SCRIPT lookup <cli>` | Show structured info (desc, subcommands, flags, keywords, help) |
 | `python3 $SCRIPT search <keyword...>` | Find tools by task keywords (e.g. "json filter") |
 | `python3 $SCRIPT discover` | Auto-scan system for known binaries |
+| `python3 $SCRIPT autodiscover` | Register only *newly-appeared* PATH tools; auto-surface user-installed ones (used by the hook) |
 | `python3 $SCRIPT non-standard [--format json]` | List installed tools the model likely doesn't know (discovery manifest) |
 | `python3 $SCRIPT hint <cli>` | Compact usage hint for one novel tool (used by hooks) |
 | `python3 $SCRIPT flag <cli> [--off]` | Mark/unmark a tool as novel (surface it in the manifest) |
@@ -242,12 +243,14 @@ This installs two non-blocking hooks (they only add context, never deny):
 
 | Hook | When | What it injects |
 |------|------|-----------------|
-| `UserPromptSubmit` | You send a message | The **non-standard tool manifest** — installed tools the model likely doesn't know exist. Solves "I didn't know `mmx` could do that." Once per session. |
+| `UserPromptSubmit` | You send a message | Runs `autodiscover` (cheap incremental scan), then injects the **non-standard tool manifest** — installed tools the model likely doesn't know exist. Solves "I didn't know `mmx` could do that." Once per session. |
 | `PreToolUse(Bash)` | Right before a command runs | The **usage hint** for any novel tool in the command (subcommands/flags). Once per tool per session. |
 
-Only tools flagged **novel** surface (KB `novel` entries like `mmx`/`opencli`, plus
-anything you `flag`), so well-known tools (git, jq, docker…) cost zero context.
-Tell the user to mark their own tools: `register <tool> --novel` or `flag <tool>`.
+Only tools flagged **novel** surface, so well-known tools (git, jq, docker…)
+cost zero context. With the hook installed, tools you newly install **under
+`$HOME`** are auto-surfaced on the next session (see `autodiscover`); use
+`flag <tool> --off` to hide a false positive, or `register <tool> --novel` /
+`flag <tool>` to surface one manually.
 
 ## Building accurate entries (research recipe)
 

@@ -48,7 +48,7 @@ python3 scripts/install-hooks.py        # --uninstall to remove
 
 | Moment | Hook | What it injects |
 |--------|------|-----------------|
-| You send a message | `UserPromptSubmit` | The list of **unfamiliar** tools installed on *this* machine — so the agent reaches for `mmx` / your-tool instead of saying "I can't." Once per session. |
+| You send a message | `UserPromptSubmit` | Auto-discovers anything you've installed since last time, then injects the list of **unfamiliar** tools on *this* machine — so the agent reaches for `mmx` / your-tool instead of saying "I can't." Once per session. |
 | Right before a command runs | `PreToolUse(Bash)` | The **usage** (subcommands/flags) of any unfamiliar tool in that command. Once per tool per session. |
 
 Both hooks are non-blocking (they only add context) and only fire for tools the
@@ -69,7 +69,8 @@ Or just talk to your agent: *"scan my system and register my CLI tools"*,
 *"flag mmx and kimi so you know they exist"*.
 
 > 💡 The discovery list is built from **your** machine. cli-hub ships knowing
-> nothing about which tools you run — you decide what surfaces with `flag`.
+> nothing about which tools you run. With the hooks installed, tools you install
+> under `$HOME` are surfaced automatically; otherwise you decide with `flag`.
 
 ## Commands
 
