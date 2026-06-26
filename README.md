@@ -59,16 +59,17 @@ day the session pass also refreshes drifted versions and notes which tools have 
 ## Quick start
 
 ```bash
-S=~/.agents/skills/cli-hub/scripts/cli-registry.py   # path varies by agent
+DIR=~/.agents/skills/cli-hub/scripts        # path varies by agent
+python3 $DIR/install-hooks.py               # (Claude Code) turn on auto mode
 
-python3 $S discover                  # scan PATH, register what's there
-python3 $S flag mmx                  # mark a tool the model doesn't know
-python3 $S non-standard              # preview the discovery manifest
-python3 ~/.agents/skills/cli-hub/scripts/install-hooks.py   # (Claude Code) go automatic
+python3 $DIR/cli-registry.py autodiscover --seed   # list tools you already have
+python3 $DIR/cli-registry.py flag mmx kimi codex   # surface the ones you care about
+python3 $DIR/cli-registry.py non-standard          # preview what the agent will see
 ```
 
-Or just talk to your agent: *"scan my system and register my CLI tools"*,
-*"flag mmx and kimi so you know they exist"*.
+From then on, tools you install are surfaced automatically — you don't run
+anything. Or just talk to your agent: *"turn on cli-hub auto mode"*,
+*"surface mmx and kimi so you remember them"*.
 
 > 💡 The discovery list is built from **your** machine. cli-hub ships knowing
 > nothing about which tools you run. With the hooks installed, a tool you newly

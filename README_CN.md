@@ -55,15 +55,16 @@ python3 scripts/install-hooks.py        # 卸载用 --uninstall
 ## 快速上手
 
 ```bash
-S=~/.agents/skills/cli-hub/scripts/cli-registry.py   # 路径随 Agent 而变
+DIR=~/.agents/skills/cli-hub/scripts        # 路径随 Agent 而变
+python3 $DIR/install-hooks.py               # (Claude Code) 开启自动模式
 
-python3 $S discover                  # 扫 PATH，注册已有工具
-python3 $S flag mmx                  # 标记一个模型不认识的工具
-python3 $S non-standard              # 预览发现清单
-python3 ~/.agents/skills/cli-hub/scripts/install-hooks.py   # (Claude Code) 开启自动模式
+python3 $DIR/cli-registry.py autodiscover --seed   # 列出你已经装了的工具
+python3 $DIR/cli-registry.py flag mmx kimi codex   # 浮现你在意的那几个
+python3 $DIR/cli-registry.py non-standard          # 预览 Agent 会看到什么
 ```
 
-或者直接对 Agent 说：*"扫描我的系统，注册我的 CLI 工具"*、*"把 mmx 和 kimi 标记一下，让你知道它们存在"*。
+之后你新装的工具会自动浮现，**什么都不用跑**。或者直接对 Agent 说：
+*"开启 cli-hub 自动模式"*、*"把 mmx 和 kimi 浮现出来让你记住"*。
 
 > 💡 发现清单来自**你自己的**机器。cli-hub 出厂时对你用什么工具一无所知。
 > 装了 hook 后，你在 `$HOME` 下新装的**单个**工具会自动浮现（一大批——比如某
