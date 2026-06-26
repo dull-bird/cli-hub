@@ -1301,49 +1301,59 @@ def cmd_help_cli(args):
         print("No help output from {}".format(binary))
 
 
+def _refresh_entry(name, entry):
+    """Re-extract a tool's cached help while PRESERVING its curated
+    description and surface flag (so an auto-refresh never wipes research)."""
+    cmd_register(argparse.Namespace(
+        cli=name, binary=entry.get("binary", name),
+        desc=entry.get("description", ""), force=True,
+        novel=bool(entry.get("surface"))))
+
+
 def cmd_check_stale(args):
-    """Check for tools whose installed version differs from registry."""
-    entries = [e for e in sorted(REGISTRY_DIR.glob("*.json")) if not e.name.startswith(".")]
-    if not entries:
-        print("No tools registered.")
-        return
+    """Find tools whose installed version differs from the registry.
 
-    stale = []
-    current = 0
-    for e in entries:
-        try:
-            d = json.loads(e.read_text(encoding="utf-8"))
-        except Exception:
+    --novel : only check surfaced tools (cheap; for the daily hook pass)
+    --daily : skip if already run today (date-marked)
+    --update: re-register drifted tools, preserving curated desc + surface
+    """
+    if args.daily:
+        marker = REGISTRY_DIR / ".last-stale"
+        today = datetime.now().strftime("%Y-%m-%d")
+        if marker.is_file() and marker.read_text(encoding="utf-8").strip() == today:
+            return
+        REGISTRY_DIR.mkdir(parents=True, exist_ok=True)
+        marker.write_text(today, encoding="utf-8")
+
+    stale, checked = [], 0
+    for name, d in _iter_registry():
+        if args.novel and not _is_novel(name, d):
             continue
-        name = d.get("name")
         binary = d.get("binary", name)
-        ad = d.get("auto_discovered", {})
-        registered_ver = ad.get("version")
+        registered_ver = d.get("auto_discovered", {}).get("version")
         installed_ver = _fetch_version(binary)
-
         if installed_ver is None:
             continue
-
-        current += 1
+        checked += 1
         if registered_ver and installed_ver != registered_ver:
-            stale.append((name, registered_ver, installed_ver))
+            stale.append((name, registered_ver, installed_ver, d))
 
-    print("{} tools with version info".format(current))
-    if stale:
-        print("{} stale (installed ≠ registered):\n".format(len(stale)))
-        for name, old, new in stale:
-            print("  {}: {} → {}".format(name, old, new))
-        if args.update:
-            print("\nRe-registering stale tools...")
-            for name, old, new in stale:
-                cmd_register(argparse.Namespace(
-                    cli=name, binary=name, desc="", force=True))
+    if args.update:
+        for name, old, new, d in stale:
+            _refresh_entry(name, d)
+            print("updated: {} {} -> {}".format(name, old, new))  # parsed by the hook
+        if stale:
             _save_keyword_index()
-            print("Done.")
-        else:
-            print("\nDry run. Use --update to re-register.")
-    else:
-        print("All up to date.")
+        return
+
+    # report mode
+    if not stale:
+        print("All {} tools up to date.".format(checked))
+        return
+    print("{} stale (installed != registered):".format(len(stale)))
+    for name, old, new, _ in stale:
+        print("  {}: {} -> {}".format(name, old, new))
+    print("\nDry run. Use --update to refresh.")
 
 # ── Discovery surface (which tools the model likely doesn't know) ──
 
@@ -1424,7 +1434,14 @@ def cmd_hint(args):
         cmds = [c.split(" — ")[0].strip() for c in commands.splitlines() if c.strip()]
         if cmds:
             lines.append("subcommands: {}".format(", ".join(cmds[:20])))
-    if entry.get("official_skill"):
+    skill = entry.get("skill") or {}
+    if skill.get("installed"):
+        v = " v{}".format(skill["version"]) if skill.get("version") else ""
+        lines.append("→ has an official skill installed{} — prefer it: {}".format(v, skill.get("path", "")))
+    elif skill.get("candidates"):
+        hit = skill["candidates"][0]["hits"][0]
+        lines.append("→ an installable skill may exist (unverified): {}".format(hit))
+    elif entry.get("official_skill"):
         lines.append("(official skill: {})".format(entry["official_skill"]))
     print("\n".join(lines))
 
@@ -1522,6 +1539,89 @@ def cmd_autodiscover(args):
         registered, ("; surfaced: " + ", ".join(surfaced)) if surfaced else ""))
 
 
+def _skill_info(name):
+    """Locate an installed official skill for a tool; parse light frontmatter."""
+    path = _find_official_skill(name)
+    if not path:
+        return None
+    info = {"path": path, "version": None}
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+        m = re.search(r'^---\s*(.*?)\s*---', text, re.S)
+        fm = m.group(1) if m else text[:600]
+        v = re.search(r'(?mi)^\s*version\s*:\s*(.+)$', fm)
+        if v:
+            info["version"] = v.group(1).strip().strip('"\'')
+    except Exception:
+        pass
+    return info
+
+
+# Provider-agnostic: only searchers whose binary is present get used. Never
+# hardcode a single skill marketplace.
+_SKILL_SEARCHERS = [
+    ("clawhub", lambda n: ["clawhub", "search", n]),
+    ("skills", lambda n: ["skills", "search", n]),
+]
+
+
+def cmd_skills_check(args):
+    """Record, per tool, whether an official agent-skill is installed (and its
+    version). With --search, also query any skill registries whose CLI is
+    present. Honest scope: skills rarely declare CLI-version compatibility, so
+    we record presence/version, NOT a CLI<->skill version match.
+    """
+    if args.daily:
+        marker = REGISTRY_DIR / ".last-skills"
+        today = datetime.now().strftime("%Y-%m-%d")
+        if marker.is_file() and marker.read_text(encoding="utf-8").strip() == today:
+            return
+        REGISTRY_DIR.mkdir(parents=True, exist_ok=True)
+        marker.write_text(today, encoding="utf-8")
+
+    targets = [args.cli] if args.cli else [n for n, e in _iter_registry() if _is_novel(n, e)]
+    if not targets:
+        print("No novel tools to check (flag one, or pass a name).")
+        return
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    for name in targets:
+        entry = _load_entry(name)
+        if entry is None:
+            print("{}: not registered".format(name))
+            continue
+        skill = _skill_info(name)
+        rec = {"checked": today, "installed": bool(skill)}
+        candidates = []
+        if skill:
+            rec["path"] = skill["path"]
+            rec["version"] = skill["version"]
+        elif args.search:
+            for binary, build in _SKILL_SEARCHERS:
+                if not _whereis(binary):
+                    continue
+                _, out, _err = _run(build(name), timeout=20)
+                hits = [l.strip() for l in (out or "").splitlines()
+                        if name.lower() in l.lower()][:2]
+                if hits:
+                    candidates.append({"via": binary, "hits": hits})
+            if candidates:
+                rec["candidates"] = candidates
+        entry["skill"] = rec
+        (REGISTRY_DIR / "{}.json".format(name)).write_text(
+            json.dumps(entry, indent=2, ensure_ascii=False), encoding="utf-8")
+
+        if skill:
+            v = " v{}".format(skill["version"]) if skill["version"] else ""
+            print("{}: official skill INSTALLED{} — {}".format(name, v, skill["path"]))
+        elif candidates:
+            print("{}: installable skill — {}".format(
+                name, "; ".join("{}: {}".format(c["via"], c["hits"][0]) for c in candidates)))
+        else:
+            tip = "" if args.search else " (use --search to query skill registries)"
+            print("{}: no official skill installed{}".format(name, tip))
+
+
 def cmd_flag(args):
     """Mark/unmark a registered tool as novel (surfaced in the manifest)."""
     name = args.cli
@@ -1578,7 +1678,19 @@ def main():
 
     p = sub.add_parser("check-stale", help="Check for tools with updated versions")
     p.add_argument("--update", action="store_true",
-                   help="Re-register tools whose version changed")
+                   help="Refresh drifted tools (preserves curated desc + surface)")
+    p.add_argument("--novel", action="store_true",
+                   help="Only check surfaced/novel tools (cheap)")
+    p.add_argument("--daily", action="store_true",
+                   help="Skip if already run today (for the hook)")
+
+    p = sub.add_parser("skills-check",
+                       help="Record whether an official skill is installed for novel tools")
+    p.add_argument("cli", nargs="?", help="Single tool (default: all novel tools)")
+    p.add_argument("--search", action="store_true",
+                   help="Also query installed skill-registry CLIs (clawhub/skills)")
+    p.add_argument("--daily", action="store_true",
+                   help="Skip if already run today (for the hook)")
 
     p = sub.add_parser("remove", help="Remove from registry")
     p.add_argument("cli", help="CLI name")
@@ -1615,6 +1727,7 @@ def main():
         "check-stale": cmd_check_stale,
         "non-standard": cmd_non_standard,
         "autodiscover": cmd_autodiscover,
+        "skills-check": cmd_skills_check,
         "hint": cmd_hint,
         "flag": cmd_flag,
     }[args.command](args)

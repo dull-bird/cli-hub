@@ -49,7 +49,8 @@ python3 scripts/install-hooks.py        # 卸载用 --uninstall
 | 命令执行前 | `PreToolUse(Bash)` | 命令里那个陌生工具的**用法**（子命令/参数）。每工具每会话一次。 |
 
 两个 hook 都是非阻塞的（只加上下文），且只对**模型不认识**的工具触发——
-`git`、`docker`、`jq` 零开销。
+`git`、`docker`、`jq` 零开销。每天一次，会话还会顺手刷新漂移的版本、并标记哪些工具
+装了**官方 skill**，让 Agent 在有更专业的 skill 时优先用它。
 
 ## 快速上手
 
@@ -76,10 +77,12 @@ python3 ~/.agents/skills/cli-hub/scripts/install-hooks.py   # (Claude Code) 开�
 | `lookup <名称>` | 完整信息：描述、关键词、子命令、参数、help |
 | `search <关键词>` | 按任务找工具（如 `search json extract`） |
 | `non-standard` | 列出模型可能不认识的已装工具（发现清单） |
+| `autodiscover` | 只注册**新出现**的 PATH 工具；自动浮现用户安装的 |
 | `flag <名称> [--off]` | 标记/取消标记某工具为 novel（浮现它） |
 | `register <名称> [--novel] [--desc "…"]` | 注册工具；`--novel` 浮现它 |
 | `hint <名称>` | 某 novel 工具的精简用法提示（hook 使用） |
-| `check-stale [--update]` | 检测/重注册版本变化的工具 |
+| `skills-check [<名称>] [--search]` | 标记某工具是否装了官方 skill（有则优先用） |
+| `check-stale [--novel] [--update]` | 检测/刷新版本漂移的工具（保留实证描述） |
 | `remove <名称>` | 从注册表移除 |
 
 ## 设计原则

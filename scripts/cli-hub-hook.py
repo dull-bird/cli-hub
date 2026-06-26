@@ -87,14 +87,21 @@ def _candidate_tools(command):
 def handle_user_prompt(data):
     if not _seen(data.get("session_id", ""), "__session__"):
         sys.exit(0)  # only the first prompt of a session does the work
-    # Pick up tools installed since last time (cheap unless PATH changed).
-    _registry("autodiscover", timeout=20)
+    # Keep the registry fresh — all cheap, daily-gated, and best-effort.
+    _registry("autodiscover", timeout=20)              # new tools installed since last time
+    _registry("skills-check", "--daily", timeout=20)   # official-skill status (local)
+    _, drift = _registry("check-stale", "--novel", "--daily", "--update", timeout=40)
+
     code, out = _registry("non-standard", "--format", "text")
-    if code == 0 and out:
-        _emit("UserPromptSubmit",
-              "This machine has these non-standard CLI tools installed that you "
-              "likely don't know from training. Consider them when they fit the "
-              "user's request; verify exact usage before running:\n" + out)
+    if code != 0 or not out:
+        sys.exit(0)
+    ctx = ("This machine has these non-standard CLI tools installed that you "
+           "likely don't know from training. Consider them when they fit the "
+           "user's request; verify exact usage before running:\n" + out)
+    updated = [l for l in drift.splitlines() if l.startswith("updated:")]
+    if updated:
+        ctx += "\n\nUpdated since last check (cached info refreshed):\n" + "\n".join(updated)
+    _emit("UserPromptSubmit", ctx)
     sys.exit(0)
 
 

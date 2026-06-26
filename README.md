@@ -52,7 +52,9 @@ python3 scripts/install-hooks.py        # --uninstall to remove
 | Right before a command runs | `PreToolUse(Bash)` | The **usage** (subcommands/flags) of any unfamiliar tool in that command. Once per tool per session. |
 
 Both hooks are non-blocking (they only add context) and only fire for tools the
-model **doesn't already know** — `git`, `docker`, `jq` cost zero context.
+model **doesn't already know** — `git`, `docker`, `jq` cost zero context. Once a
+day the session pass also refreshes drifted versions and notes which tools have an
+**official skill** installed, so the agent prefers the richer skill when one exists.
 
 ## Quick start
 
@@ -81,10 +83,12 @@ Or just talk to your agent: *"scan my system and register my CLI tools"*,
 | `lookup <name>` | Full info: description, keywords, subcommands, flags, help |
 | `search <kw...>` | Find a tool by task (e.g. `search json extract`) |
 | `non-standard` | List installed tools the model likely doesn't know (the manifest) |
+| `autodiscover` | Register only *newly-appeared* PATH tools; auto-surface user-installed ones |
 | `flag <name> [--off]` | Mark / unmark a tool as novel (surface it) |
 | `register <name> [--novel] [--desc "…"]` | Register a tool; `--novel` surfaces it |
 | `hint <name>` | Compact usage hint for one novel tool (used by hooks) |
-| `check-stale [--update]` | Detect / re-register tools whose version changed |
+| `skills-check [<name>] [--search]` | Note whether an official skill is installed for a tool (prefer it) |
+| `check-stale [--novel] [--update]` | Detect / refresh tools whose version drifted (keeps curated desc) |
 | `remove <name>` | Remove from registry |
 
 ## Design principles

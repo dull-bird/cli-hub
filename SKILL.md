@@ -100,6 +100,8 @@ fi
 | `python3 $SCRIPT non-standard [--format json]` | List installed tools the model likely doesn't know (discovery manifest) |
 | `python3 $SCRIPT hint <cli>` | Compact usage hint for one novel tool (used by hooks) |
 | `python3 $SCRIPT flag <cli> [--off]` | Mark/unmark a tool as novel (surface it in the manifest) |
+| `python3 $SCRIPT skills-check [<cli>] [--search]` | Record whether an official agent-skill is installed for a tool (prefer it when present); `--search` queries installed skill-registry CLIs |
+| `python3 $SCRIPT check-stale [--novel] [--update]` | Detect / refresh tools whose installed version drifted (`--update` keeps curated desc + surface) |
 | `python3 $SCRIPT remove <cli>` | Remove from registry |
 | `python3 $SCRIPT help <cli>` | Live `--help` dump (registered or not) |
 
@@ -243,7 +245,7 @@ This installs two non-blocking hooks (they only add context, never deny):
 
 | Hook | When | What it injects |
 |------|------|-----------------|
-| `UserPromptSubmit` | You send a message | Runs `autodiscover` (cheap incremental scan), then injects the **non-standard tool manifest** — installed tools the model likely doesn't know exist. Solves "I didn't know `mmx` could do that." Once per session. |
+| `UserPromptSubmit` | You send a message | Runs `autodiscover` + daily `skills-check` / `check-stale --update`, then injects the **non-standard tool manifest** — installed tools the model likely doesn't know exist, plus any that updated since last check. Solves "I didn't know `mmx` could do that." Once per session. |
 | `PreToolUse(Bash)` | Right before a command runs | The **usage hint** for any novel tool in the command (subcommands/flags). Once per tool per session. |
 
 Only tools flagged **novel** surface, so well-known tools (git, jq, docker…)
