@@ -66,7 +66,8 @@ python3 ~/.agents/skills/cli-hub/scripts/install-hooks.py   # (Claude Code) 开�
 或者直接对 Agent 说：*"扫描我的系统，注册我的 CLI 工具"*、*"把 mmx 和 kimi 标记一下，让你知道它们存在"*。
 
 > 💡 发现清单来自**你自己的**机器。cli-hub 出厂时对你用什么工具一无所知。
-> 装了 hook 后，你在 `$HOME` 下新装的工具会自动浮现；否则由你用 `flag` 决定。
+> 装了 hook 后，你在 `$HOME` 下新装的**单个**工具会自动浮现（一大批——比如某
+> Python 包带的 20 个脚本——则列为候选不自动浮现）；用 `flag` 增减。
 
 ## 命令
 

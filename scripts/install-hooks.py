@@ -80,9 +80,14 @@ def main():
 
     print("{} cli-hub hooks in {}".format(
         "Removed" if args.uninstall else "Installed", path))
-    if not args.uninstall:
-        print("  UserPromptSubmit + PreToolUse(Bash) -> {}".format(CMD))
-        print("  Restart Claude Code (or run /hooks) to load them.")
+    if args.uninstall:
+        return
+    print("  UserPromptSubmit + PreToolUse(Bash) -> {}".format(CMD))
+    print("\nNext: restart Claude Code (or run /hooks) to load them.")
+    print("From now on, tools you install are surfaced automatically. For tools you")
+    reg = HOOK.parent / "cli-registry.py"
+    print("already have, list them with:  python3 {} autodiscover --seed".format(reg))
+    print("then surface the ones you want: python3 {} flag <tool> <tool> ...".format(reg))
 
 
 if __name__ == "__main__":

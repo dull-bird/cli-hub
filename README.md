@@ -71,8 +71,9 @@ Or just talk to your agent: *"scan my system and register my CLI tools"*,
 *"flag mmx and kimi so you know they exist"*.
 
 > 💡 The discovery list is built from **your** machine. cli-hub ships knowing
-> nothing about which tools you run. With the hooks installed, tools you install
-> under `$HOME` are surfaced automatically; otherwise you decide with `flag`.
+> nothing about which tools you run. With the hooks installed, a tool you newly
+> install under `$HOME` is surfaced automatically (a big batch — e.g. a Python
+> package's 20 scripts — is listed as candidates instead); `flag` to adjust.
 
 ## Commands
 

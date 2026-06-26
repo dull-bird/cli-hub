@@ -22,6 +22,7 @@ import sys
 import argparse
 import subprocess
 import fnmatch
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -497,8 +498,13 @@ def _find_official_skill(name):
 
 # ── help extraction ─────────────────────────────────────────────
 
-def _fetch_help_text(binary, subcommand=None):
-    """Get help text trying --help, -h, help, man, bare invocation."""
+def _fetch_help_text(binary, subcommand=None, light=False):
+    """Get help text trying --help, -h, help, man, bare invocation.
+
+    light=True: only --help/-h with a short timeout, and NO man / bare-invocation
+    fallback. The bare-invocation fallback launches the tool with no args, which
+    hangs on TUIs/REPLs — fine for a one-off lookup, fatal for bulk scanning.
+    """
     if subcommand:
         attempts = [
             [binary, subcommand, "-h"],
@@ -506,17 +512,19 @@ def _fetch_help_text(binary, subcommand=None):
             [binary, "help", subcommand],
         ]
     else:
-        attempts = [
-            [binary, "--help"],
-            [binary, "-h"],
-            [binary, "help"],
-        ]
+        attempts = [[binary, "--help"], [binary, "-h"]]
+        if not light:
+            attempts.append([binary, "help"])
 
+    timeout = 4 if light else 15
     for cmd in attempts:
-        code, out, err = _run(cmd, timeout=15)
+        code, out, err = _run(cmd, timeout=timeout)
         output = (out + err).strip()
         if len(output) > 80:
             return output
+
+    if light:
+        return ""  # skip the hang-prone fallbacks
 
     # man page fallback
     code, out, err = _run(["man", binary], timeout=10)
@@ -667,9 +675,14 @@ def _format_options_text(options):
     return "\n".join(lines)
 
 
-def _extract_help(binary):
-    """Extract structured help: usage, subcommands with options, global options."""
-    text = _fetch_help_text(binary)
+def _extract_help(binary, light=False):
+    """Extract structured help: usage, subcommands with options, global options.
+
+    light=True skips the per-subcommand drill-down (and its many subprocess
+    calls) — used for bulk scanning where speed and not-hanging matter. The
+    top-level commands_text is still populated from the main --help.
+    """
+    text = _fetch_help_text(binary, light=light)
     if not text:
         return {"binary": binary, "help_raw": "{} — help unavailable".format(binary)}
 
@@ -687,6 +700,9 @@ def _extract_help(binary):
         "subcommands": {},
         "global_options": [],
     }
+
+    if light:
+        return result
 
     top_subs = parsed_subs[:12]
 
@@ -754,10 +770,13 @@ def _score_tool_quality(result):
     elif summary and len(summary) > 10:
         score += 1.5
 
-    # Has subcommands → interactive CLI tool
-    if subcommands and len(subcommands) > 1:
+    # Has subcommands → interactive CLI tool. Count the parsed top-level
+    # commands too, so a light extract (no drill-down) isn't penalised.
+    cmd_lines = [l for l in commands_text.splitlines() if l.strip()]
+    n_sub = max(len(subcommands), len(cmd_lines))
+    if n_sub > 1:
         score += 3.0
-    elif subcommands and len(subcommands) == 1:
+    elif n_sub == 1:
         score += 1.5
 
     # Has structured options → useful flag surface
@@ -945,7 +964,7 @@ def cmd_register(args):
         print("Warning: {} not found on PATH. Use --force to register anyway.".format(binary))
 
     official = _find_official_skill(name)
-    info = _extract_help(binary)
+    info = _extract_help(binary, light=getattr(args, "light", False))
 
     # P0+P1: smart description resolution
     description = desc or _resolve_description(name, info.get("help_raw", ""))
@@ -1498,45 +1517,57 @@ def cmd_autodiscover(args):
     REGISTRY_DIR.mkdir(parents=True, exist_ok=True)
     PATH_SEEN.write_text(json.dumps(names, ensure_ascii=False), encoding="utf-8")
 
-    if prev is None:
+    if getattr(args, "seed", False):
+        new = [n for n in names if _under_home(current[n])]
+        bulk = True
+    elif prev is None:
         print("Baseline recorded ({} binaries on PATH).".format(len(names)))
         return
+    else:
+        new = [n for n in names if n not in prev]
+        # A big batch (e.g. `pip install jupyter` adds ~20 console scripts) is a
+        # weak signal — register but don't auto-surface, or the manifest floods.
+        bulk = len(new) > 8
 
-    new = [n for n in names if n not in prev]
     if not new:
         if args.verbose:
             print("No new tools on PATH.")
         return
 
-    registered, surfaced = 0, []
+    registered, surfaced, suggested = 0, [], []
+    seen_desc = set()
+    deadline = time.monotonic() + 60  # bound the one-time seed; rest caught later
     for name in new:
+        if time.monotonic() > deadline:
+            break
         if name in UNIX_BASICS or (REGISTRY_DIR / "{}.json".format(name)).is_file():
             continue
         if any(fnmatch.fnmatch(name, pat) for pat in _SYSTEM_NOISE_PATTERNS):
             continue
         path = current[name]
-        info = _extract_help(path)
+        info = _extract_help(path, light=True)
         if _is_noise_help(info.get("help_raw", "")) or \
                 _score_tool_quality(info) < _MIN_QUALITY_SCORE:
             continue
-        auto = _under_home(path) and name not in KNOWN_CLI_KB
+        summary = (info.get("summary") or "").strip().lower()
+        candidate = _under_home(path) and name not in KNOWN_CLI_KB and len(summary) > 15
+        dup = candidate and summary in seen_desc       # kills foo / foo-cli / foo3 triples
+        surface = candidate and not bulk and not dup    # auto-surface only small, deliberate installs
         cmd_register(argparse.Namespace(
-            cli=name, binary=path, desc="", force=False, novel=auto))
+            cli=name, binary=path, desc="", force=False, novel=surface, light=True))
         registered += 1
-        if auto:
-            entry = _load_entry(name)
-            real = entry and not entry.get("description", "").startswith("External CLI:")
-            if real:
-                surfaced.append(name)
-            elif entry:  # thin description — don't surface noise
-                entry.pop("surface", None)
-                (REGISTRY_DIR / "{}.json".format(name)).write_text(
-                    json.dumps(entry, indent=2, ensure_ascii=False), encoding="utf-8")
+        if candidate and not dup:
+            seen_desc.add(summary)
+            (surfaced if surface else suggested).append(name)
 
     if registered:
         _save_keyword_index()
-    print("Auto-registered {} new tool(s){}.".format(
-        registered, ("; surfaced: " + ", ".join(surfaced)) if surfaced else ""))
+    msg = "Auto-registered {} new tool(s)".format(registered)
+    if surfaced:
+        msg += "; surfaced: " + ", ".join(surfaced)
+    if suggested:
+        msg += "; candidates (flag <name> to surface): " + ", ".join(suggested[:30])
+    print(msg)
 
 
 def _skill_info(name):
@@ -1656,19 +1687,20 @@ def cmd_skill_pending(args):
 
 
 def cmd_flag(args):
-    """Mark/unmark a registered tool as novel (surfaced in the manifest)."""
-    name = args.cli
-    entry = _load_entry(name)
-    if entry is None:
-        print("Not registered: {} (run: register {} first)".format(name, name))
-        sys.exit(1)
-    if args.off:
-        entry.pop("surface", None)
-    else:
-        entry["surface"] = True
-    (REGISTRY_DIR / "{}.json".format(name)).write_text(
-        json.dumps(entry, indent=2, ensure_ascii=False), encoding="utf-8")
-    print("Surface flag {} for {}".format("OFF" if args.off else "ON", name))
+    """Mark/unmark one or more registered tools as novel (surfaced)."""
+    names = args.cli if isinstance(args.cli, list) else [args.cli]
+    for name in names:
+        entry = _load_entry(name)
+        if entry is None:
+            print("Not registered: {} (run: register {} first)".format(name, name))
+            continue
+        if args.off:
+            entry.pop("surface", None)
+        else:
+            entry["surface"] = True
+        (REGISTRY_DIR / "{}.json".format(name)).write_text(
+            json.dumps(entry, indent=2, ensure_ascii=False), encoding="utf-8")
+        print("Surface flag {} for {}".format("OFF" if args.off else "ON", name))
 
 
 def main():
@@ -1738,14 +1770,16 @@ def main():
     p = sub.add_parser("autodiscover",
                        help="Incrementally register newly-appeared PATH tools (for hooks)")
     p.add_argument("--verbose", action="store_true")
+    p.add_argument("--seed", action="store_true",
+                   help="One-time: surface tools already installed under $HOME")
 
     p = sub.add_parser("hint", help="Compact usage hint for one novel tool (for hooks)")
     p.add_argument("cli", help="CLI name")
     p.add_argument("--force", action="store_true",
                    help="Emit even if the tool isn't flagged novel")
 
-    p = sub.add_parser("flag", help="Mark a registered tool as novel (surface in manifest)")
-    p.add_argument("cli", help="CLI name")
+    p = sub.add_parser("flag", help="Mark registered tool(s) as novel (surface in manifest)")
+    p.add_argument("cli", nargs="+", help="CLI name(s)")
     p.add_argument("--off", action="store_true", help="Unset the novel flag")
 
     p = sub.add_parser("skill-pending",
