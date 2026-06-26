@@ -101,6 +101,7 @@ fi
 | `python3 $SCRIPT hint <cli>` | Compact usage hint for one novel tool (used by hooks) |
 | `python3 $SCRIPT flag <cli> [--off]` | Mark/unmark a tool as novel (surface it in the manifest) |
 | `python3 $SCRIPT skills-check [<cli>] [--search]` | Record whether an official agent-skill is installed for a tool (prefer it when present); `--search` queries installed skill-registry CLIs |
+| `python3 $SCRIPT skill-pending [--peek]` | Surface installable-skill reminders to the user **once** (used by the hook) |
 | `python3 $SCRIPT check-stale [--novel] [--update]` | Detect / refresh tools whose installed version drifted (`--update` keeps curated desc + surface) |
 | `python3 $SCRIPT remove <cli>` | Remove from registry |
 | `python3 $SCRIPT help <cli>` | Live `--help` dump (registered or not) |

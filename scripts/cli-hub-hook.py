@@ -87,21 +87,35 @@ def _candidate_tools(command):
 def handle_user_prompt(data):
     if not _seen(data.get("session_id", ""), "__session__"):
         sys.exit(0)  # only the first prompt of a session does the work
-    # Keep the registry fresh — all cheap, daily-gated, and best-effort.
+    # Keep the registry fresh — all cheap, local, daily-gated, best-effort.
     _registry("autodiscover", timeout=20)              # new tools installed since last time
-    _registry("skills-check", "--daily", timeout=20)   # official-skill status (local)
+    _registry("skills-check", "--daily", timeout=20)   # official-skill status (local only)
     _, drift = _registry("check-stale", "--novel", "--daily", "--update", timeout=40)
+    _, pending = _registry("skill-pending")            # installable skills not yet announced
 
+    parts = []
     code, out = _registry("non-standard", "--format", "text")
-    if code != 0 or not out:
-        sys.exit(0)
-    ctx = ("This machine has these non-standard CLI tools installed that you "
-           "likely don't know from training. Consider them when they fit the "
-           "user's request; verify exact usage before running:\n" + out)
-    updated = [l for l in drift.splitlines() if l.startswith("updated:")]
-    if updated:
-        ctx += "\n\nUpdated since last check (cached info refreshed):\n" + "\n".join(updated)
-    _emit("UserPromptSubmit", ctx)
+    if code == 0 and out:
+        parts.append(
+            "This machine has these non-standard CLI tools installed that you "
+            "likely don't know from training. Consider them when they fit the "
+            "user's request; verify exact usage before running:\n" + out)
+        updated = [l for l in drift.splitlines() if l.startswith("updated:")]
+        if updated:
+            parts.append("Updated since last check (cached info refreshed):\n"
+                         + "\n".join(updated))
+
+    recs = [l for l in pending.splitlines() if "\t" in l]
+    if recs:
+        lines = "\n".join("- {}: {}".format(*l.split("\t", 1)) for l in recs)
+        parts.append(
+            "Heads-up to relay to the user (once): these installed tools have a "
+            "community agent-skill available (unverified) that may make them work "
+            "better. Mention it so they can decide whether to install one "
+            "(`clawhub install <slug>`):\n" + lines)
+
+    if parts:
+        _emit("UserPromptSubmit", "\n\n".join(parts))
     sys.exit(0)
 
 

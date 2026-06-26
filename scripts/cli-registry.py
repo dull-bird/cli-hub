@@ -1591,12 +1591,16 @@ def cmd_skills_check(args):
             print("{}: not registered".format(name))
             continue
         skill = _skill_info(name)
-        rec = {"checked": today, "installed": bool(skill)}
-        candidates = []
+        rec = dict(entry.get("skill") or {})  # preserve prior candidates/announced
+        rec["checked"] = today
+        rec["installed"] = bool(skill)
         if skill:
             rec["path"] = skill["path"]
             rec["version"] = skill["version"]
+            rec.pop("candidates", None)
+            rec.pop("announced", None)
         elif args.search:
+            candidates = []
             for binary, build in _SKILL_SEARCHERS:
                 if not _whereis(binary):
                     continue
@@ -1607,6 +1611,9 @@ def cmd_skills_check(args):
                     candidates.append({"via": binary, "hits": hits})
             if candidates:
                 rec["candidates"] = candidates
+                rec.pop("announced", None)   # re-arm the one-time reminder
+            else:
+                rec.pop("candidates", None)
         entry["skill"] = rec
         (REGISTRY_DIR / "{}.json".format(name)).write_text(
             json.dumps(entry, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -1614,12 +1621,38 @@ def cmd_skills_check(args):
         if skill:
             v = " v{}".format(skill["version"]) if skill["version"] else ""
             print("{}: official skill INSTALLED{} — {}".format(name, v, skill["path"]))
-        elif candidates:
-            print("{}: installable skill — {}".format(
-                name, "; ".join("{}: {}".format(c["via"], c["hits"][0]) for c in candidates)))
+        elif rec.get("candidates"):
+            print("{}: installable skill — {}".format(name, "; ".join(
+                "{}: {}".format(c["via"], c["hits"][0]) for c in rec["candidates"])))
         else:
             tip = "" if args.search else " (use --search to query skill registries)"
             print("{}: no official skill installed{}".format(name, tip))
+
+
+def cmd_skill_pending(args):
+    """List tools with an installable skill that is not installed and not yet
+    announced, then mark them announced (so the user is reminded only once).
+
+    Local + zero-network: it reads candidates recorded earlier by
+    `skills-check --search` (which the user runs manually or via cron). Output
+    is one `name<TAB>top-hit` line per tool, for the session hook to relay.
+    """
+    pending = []
+    for name, entry in _iter_registry():
+        skill = entry.get("skill") or {}
+        cands = skill.get("candidates")
+        if not cands or skill.get("installed") or skill.get("announced"):
+            continue
+        hits = cands[0].get("hits") or [name]
+        pending.append((name, hits[0]))
+        if not args.peek:
+            skill["announced"] = True
+            entry["skill"] = skill
+            (REGISTRY_DIR / "{}.json".format(name)).write_text(
+                json.dumps(entry, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    for name, hit in pending:
+        print("{}\t{}".format(name, hit))
 
 
 def cmd_flag(args):
@@ -1715,6 +1748,11 @@ def main():
     p.add_argument("cli", help="CLI name")
     p.add_argument("--off", action="store_true", help="Unset the novel flag")
 
+    p = sub.add_parser("skill-pending",
+                       help="List (and mark announced) tools with an uninstalled skill, for the hook")
+    p.add_argument("--peek", action="store_true",
+                   help="List without marking announced")
+
     args = parser.parse_args()
     {
         "register": cmd_register,
@@ -1728,6 +1766,7 @@ def main():
         "non-standard": cmd_non_standard,
         "autodiscover": cmd_autodiscover,
         "skills-check": cmd_skills_check,
+        "skill-pending": cmd_skill_pending,
         "hint": cmd_hint,
         "flag": cmd_flag,
     }[args.command](args)
