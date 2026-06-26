@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cli-hub — every CLI your agent doesn't know it has</title>
+<meta name="description" content="One skill so your AI agent can use every CLI on your machine, including the ones it's never heard of.">
+<style>
+  :root{
+    --indigo:#4f46e5; --indigo-d:#3730a3; --ink:#1a1a2e; --muted:#5b5b76;
+    --bg:#ffffff; --soft:#f5f5fb; --line:#e6e6f0; --amber:#f59e0b; --green:#22c55e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .lang-zh{display:none}
+  body.zh .lang-en{display:none}
+  body.zh .lang-zh{display:inline}
+  body.zh .lang-zh.block{display:block}
+  code,pre{font-family:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,monospace}
+  a{color:var(--indigo);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:960px;margin:0 auto;padding:0 24px}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.85);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;align-items:center;gap:16px;height:60px}
+  .logo{font-weight:700;font-size:18px;color:var(--ink)}
+  .logo span{color:var(--indigo)}
+  nav .spacer{flex:1}
+  .pill{font-size:13px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;
+    cursor:pointer;background:var(--soft);color:var(--ink)}
+  .pill:hover{border-color:var(--indigo);color:var(--indigo)}
+
+  /* hero */
+  .hero{padding:88px 0 64px;text-align:center;
+    background:radial-gradient(1200px 400px at 50% -120px,#eef0ff,transparent)}
+  .hero h1{font-size:clamp(36px,7vw,64px);line-height:1.05;letter-spacing:-.02em;font-weight:800}
+  .hero h1 em{font-style:normal;color:var(--indigo)}
+  .tag{font-size:clamp(17px,2.6vw,21px);color:var(--muted);margin:20px auto 0;max-width:620px}
+  .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:32px}
+  .btn{padding:12px 22px;border-radius:10px;font-weight:600;font-size:15px;border:1px solid transparent}
+  .btn.primary{background:var(--indigo);color:#fff}
+  .btn.primary:hover{background:var(--indigo-d);text-decoration:none}
+  .btn.ghost{background:#fff;border-color:var(--line);color:var(--ink)}
+  .btn.ghost:hover{border-color:var(--indigo);color:var(--indigo);text-decoration:none}
+  .install{display:inline-flex;align-items:center;gap:12px;margin-top:36px;
+    background:var(--ink);color:#e8e8f5;padding:14px 20px;border-radius:12px;font-size:15px}
+  .install .dollar{color:#7c7ca8}
+  .install button{background:#2a2a45;color:#cfcfe8;border:none;padding:5px 10px;border-radius:6px;
+    font-size:12px;cursor:pointer}
+  .install button:hover{background:var(--indigo)}
+
+  /* section */
+  section{padding:56px 0;border-top:1px solid var(--line)}
+  h2{font-size:clamp(24px,4vw,32px);letter-spacing:-.01em;margin-bottom:8px}
+  .lead{color:var(--muted);max-width:680px;margin-bottom:32px}
+
+  .modes{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .card{border:1px solid var(--line);border-radius:16px;padding:26px;background:var(--soft)}
+  .card h3{font-size:19px;margin-bottom:6px}
+  .card .k{display:inline-block;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;margin-bottom:14px}
+  .k.pull{background:#e7f7ec;color:#166534}
+  .k.push{background:#fff3e0;color:#92400e}
+  .card p{color:var(--muted);font-size:15px}
+
+  .feat{display:grid;grid-template-columns:1fr 1fr;gap:18px 28px}
+  .feat .item{padding-left:30px;position:relative}
+  .feat .item::before{content:"";position:absolute;left:0;top:7px;width:14px;height:14px;
+    border-radius:4px;background:var(--indigo)}
+  .feat h4{font-size:16px;margin-bottom:3px}
+  .feat p{color:var(--muted);font-size:14.5px}
+
+  pre.code{background:var(--ink);color:#e8e8f5;padding:22px;border-radius:14px;overflow-x:auto;
+    font-size:14px;line-height:1.7}
+  pre.code .c{color:#7c7ca8}
+  pre.code .g{color:#7ee0a0}
+
+  footer{padding:40px 0;border-top:1px solid var(--line);color:var(--muted);font-size:14px;
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  @media(max-width:680px){.modes,.feat{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav><div class="wrap">
+  <div class="logo">cli<span>·</span>hub</div>
+  <div class="spacer"></div>
+  <span class="pill" id="langToggle">中文</span>
+  <a class="pill" href="https://github.com/dull-bird/cli-hub">GitHub</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <h1>
+    <span class="lang-en">Every CLI your agent<br><em>doesn't know it has</em></span>
+    <span class="lang-zh">Agent 不认得的<br><em>每一个 CLI</em></span>
+  </h1>
+  <p class="tag">
+    <span class="lang-en">One skill so your AI agent can use every command-line tool on your machine — including the ones released after its training, and the ones you wrote yourself.</span>
+    <span class="lang-zh">一个 Skill，让你的 AI Agent 会用机器上每一个命令行工具——包括它训练截止之后发布的、以及你自己写的那些。</span>
+  </p>
+  <div class="cta">
+    <a class="btn primary" href="https://github.com/dull-bird/cli-hub">
+      <span class="lang-en">View on GitHub</span><span class="lang-zh">在 GitHub 查看</span></a>
+    <a class="btn ghost" href="#how">
+      <span class="lang-en">How it works</span><span class="lang-zh">工作原理</span></a>
+  </div>
+  <div class="install">
+    <span class="dollar">$</span>
+    <code id="installCmd">npx skills add dull-bird/cli-hub</code>
+    <button id="copyBtn">copy</button>
+  </div>
+</div></header>
+
+<section id="why"><div class="wrap">
+  <h2><span class="lang-en">The blind spot</span><span class="lang-zh">那个盲区</span></h2>
+  <p class="lead">
+    <span class="lang-en block">Your agent knows <code>git</code> and <code>docker</code>. It does <strong>not</strong> know the CLI you installed last week, or any tool released after its training cut-off — so it invents flags, picks the wrong tool, or just gives up. cli-hub gives it a small local registry of the tools <em>you actually have</em>.</span>
+    <span class="lang-zh block">Agent 认得 <code>git</code>、<code>docker</code>，但它<strong>不认得</strong>你上周刚装的 CLI，也不认得任何训练截止后发布的工具——于是它瞎编参数、猜错工具、或者直接放弃。cli-hub 给它一个本地小注册表，记录<em>你真正拥有的</em>工具。</span>
+  </p>
+</div></section>
+
+<section id="how"><div class="wrap">
+  <h2><span class="lang-en">Two ways it works</span><span class="lang-zh">两种工作方式</span></h2>
+  <p class="lead">
+    <span class="lang-en block">Let the agent pull when it needs to — or push the right entry into its context automatically.</span>
+    <span class="lang-zh block">让 Agent 需要时主动拉取——或把对应条目在恰当时机自动推送进它的上下文。</span>
+  </p>
+  <div class="modes">
+    <div class="card">
+      <span class="k pull">PULL · default · every agent</span>
+      <h3><span class="lang-en">Look it up</span><span class="lang-zh">查一下</span></h3>
+      <p><span class="lang-en">Before using a tool, the agent consults the local registry for real subcommands and flags instead of guessing. Not registered yet? It falls back to live <code>--help</code> and learns on the spot.</span><span class="lang-zh">用工具前，Agent 先查本地注册表，拿到真实的子命令和参数，而不是猜。还没注册？退化为现场 <code>--help</code> 当场学。</span></p>
+    </div>
+    <div class="card">
+      <span class="k push">PUSH · optional · Claude Code</span>
+      <h3><span class="lang-en">It comes to you</span><span class="lang-zh">主动找上门</span></h3>
+      <p><span class="lang-en">Two hooks inject context automatically: on your message, the list of unfamiliar tools you have; before a command runs, that tool's usage. Non-blocking, and only for tools the model doesn't already know.</span><span class="lang-zh">两个 hook 自动注入：你发消息时，注入你装的陌生工具清单；命令执行前，注入该工具用法。非阻塞，且只针对模型不认识的工具。</span></p>
+    </div>
+  </div>
+</div></section>
+
+<section id="features"><div class="wrap">
+  <h2><span class="lang-en">Built to be general</span><span class="lang-zh">为通用而设计</span></h2>
+  <div class="feat">
+    <div class="item"><h4><span class="lang-en">The registry is the database</span><span class="lang-zh">注册表就是数据库</span></h4><p><span class="lang-en">Zero network at runtime — hooks and lookups only read local JSON.</span><span class="lang-zh">运行时零联网——hook 与查询只读本地 JSON。</span></p></div>
+    <div class="item"><h4><span class="lang-en">Opt-in, never noisy</span><span class="lang-zh">显式标记，绝不吵</span></h4><p><span class="lang-en">A tool only surfaces if you <code>flag</code> it — no flood of system binaries.</span><span class="lang-zh">工具只有你 <code>flag</code> 了才浮现——不会淹没在系统二进制里。</span></p></div>
+    <div class="item"><h4><span class="lang-en">No opinion about you</span><span class="lang-zh">不夹带预设</span></h4><p><span class="lang-en">No hardcoded tool list, no bound search engine. It stores; your agent researches.</span><span class="lang-zh">不预埋工具清单，不绑搜索引擎。它负责存，Agent 负责查。</span></p></div>
+    <div class="item"><h4><span class="lang-en">Defers to official skills</span><span class="lang-zh">让位官方 Skill</span></h4><p><span class="lang-en">If a tool has its own SKILL.md, cli-hub steps aside.</span><span class="lang-zh">工具自带 SKILL.md 时，cli-hub 自动退让。</span></p></div>
+    <div class="item"><h4><span class="lang-en">55+ agents</span><span class="lang-zh">55+ Agent</span></h4><p><span class="lang-en">OpenClaw, Claude Code, Cursor, Gemini CLI, Copilot, Windsurf, Warp…</span><span class="lang-zh">OpenClaw、Claude Code、Cursor、Gemini CLI、Copilot、Windsurf、Warp…</span></p></div>
+    <div class="item"><h4><span class="lang-en">Provider-agnostic curation</span><span class="lang-zh">不限来源的建库</span></h4><p><span class="lang-en">Identity & version from the package manager; purpose from any search.</span><span class="lang-zh">身份/版本来自包管理器；用途来自任意搜索。</span></p></div>
+  </div>
+</div></section>
+
+<section id="start"><div class="wrap">
+  <h2><span class="lang-en">Quick start</span><span class="lang-zh">快速上手</span></h2>
+  <p class="lead"><span class="lang-en block">Register what you have, flag the unfamiliar ones, and (on Claude Code) go automatic.</span><span class="lang-zh block">注册已有工具，标记陌生的，然后（在 Claude Code 上）开启自动模式。</span></p>
+  <pre class="code"><span class="c"># <span class="lang-en">path varies by agent</span><span class="lang-zh">路径随 Agent 而变</span></span>
+S=~/.agents/skills/cli-hub/scripts/cli-registry.py
+
+python3 $S discover        <span class="c"># <span class="lang-en">scan PATH, register what's there</span><span class="lang-zh">扫 PATH，注册已有工具</span></span>
+python3 $S flag mmx         <span class="c"># <span class="lang-en">mark a tool the model doesn't know</span><span class="lang-zh">标记模型不认识的工具</span></span>
+python3 $S non-standard     <span class="c"># <span class="lang-en">preview the discovery manifest</span><span class="lang-zh">预览发现清单</span></span>
+
+<span class="c"># <span class="lang-en">Claude Code: push mode</span><span class="lang-zh">Claude Code：开启推送模式</span></span>
+python3 ~/.agents/skills/cli-hub/scripts/install-hooks.py</pre>
+</div></section>
+
+<footer><div class="wrap" style="display:flex;justify-content:space-between;width:100%;flex-wrap:wrap;gap:12px">
+  <span>cli-hub · MIT</span>
+  <span>
+    <a href="https://github.com/dull-bird/cli-hub">GitHub</a> ·
+    <a href="https://github.com/dull-bird/cli-hub/blob/master/README.md">README</a> ·
+    <a href="https://github.com/dull-bird/cli-hub/blob/master/README_CN.md">中文</a>
+  </span>
+</div></footer>
+
+<script>
+  // language toggle
+  var t=document.getElementById('langToggle');
+  t.addEventListener('click',function(){
+    var zh=document.body.classList.toggle('zh');
+    t.textContent=zh?'EN':'中文';
+    document.documentElement.lang=zh?'zh':'en';
+  });
+  // copy install command
+  var b=document.getElementById('copyBtn');
+  b.addEventListener('click',function(){
+    navigator.clipboard.writeText(document.getElementById('installCmd').textContent).then(function(){
+      b.textContent='copied';setTimeout(function(){b.textContent='copy';},1500);
+    });
+  });
+</script>
+</body>
+</html>
