@@ -422,19 +422,29 @@ UNIX_BASICS = {
 
 # Name patterns to skip during PATH scan (glob). Applied automatically with --scan.
 _SYSTEM_NOISE_PATTERNS = [
+    # Architecture / cross-compilation
     "x86_64-*", "i386*", "i686*", "arm-*", "aarch64-*", "powerpc*",
+    # Debian packaging
     "dpkg-*", "deb-*", "dh_*",
+    # Netpbm image utils
     "pbm*", "pgm*", "pnm*", "ppm*", "pnmt*", "pnmd*", "pnms*",
     "pam*", "ybm*", "bmpt*", "anytopnm", "bmtoa", "giftopnm",
     "jpegtopnm", "pngtopnm", "pnmto*", "pnm-*",
+    # Compiler versioned wrappers
     "*-cc-*", "gcc-*", "g++-*", "c++-*", "cpp-*",
     "clang-*", "clang++-*", "llvm-*",
+    # Config scripts
     "*-config", "*-setup",
+    # systemd / service wrappers
     "systemd-*", "busctl*",
+    # X11 / display utilities  
     "x-*", "xsession*", "xset*", "xvfb*", "xgamma",
     "xhost", "xinput*", "xkill", "xmodmap", "xrdb", "xrefresh", "xsetroot",
+    # man / doc generators
     "man-recode", "man2*", "pod2*", "perldoc*",
+    # Perl / Python module-specific
     "ptar*", "ptargrep", "ptardiff", "perl*", "pl2*", "prove",
+    # Misc system utils nobody searches for
     "avahi-*", "dbus-*", "eject", "getent", "gsettings*", "gvfs-*",
     "hwclock", "ispell*", "locale", "logname", "logger",
     "md5sum*", "ntfs-*", "os-prober", "paperconf*", "pbmt*",
@@ -448,17 +458,84 @@ _SYSTEM_NOISE_PATTERNS = [
     "tzselect", "unlink26", "unshare",
     "update-*", "utmp*", "vmstat", "volname",
     "zdump", "zegrep", "zfgrep", "zic",
+    # ALSA audio utilities
     "alsabat", "alsaloop", "alsamixer", "alsatplg", "alsaucm",
     "aplay", "arecord", "amidi", "aplaymidi", "aseqdump",
     "aseqnet", "iecset", "speaker-test",
+    # ImageMagick / GraphicsMagick versioned
     "animate-im*", "compare-im*", "composite-im*", "conjure-im*",
     "convert-im*", "display-im*", "identify-im*", "import-im*",
     "mogrify-im*", "montage-im*", "stream-im*",
+    # Misc hardware
     "get-edid", "getwebcam", "parse-edid",
     "setpci", "setxkbmap", "showconsolefont",
     "spice-vdagent", "spice-vdagentd",
     "python*-config", "python*.*-config",
 ]
+
+# System tools worth bothering with (we run --help on these if in /usr/bin etc.)
+_PROMISING_SYSTEM_NAMES = {
+    # Networking
+    "nmcli", "nmtui", "nslookup", "host", "mtr", "telnet", "sftp",
+    "tracepath", "traceroute6", "routef", "routel", "nstat", "rtstat", "ctstat",
+    "lnstat", "arping", "rdma",
+    # Encryption & security
+    "openssl", "gpg", "gpgconf", "gpgsm", "gpgv", "passwd",
+    "chacl", "getfacl", "setfacl", "chage", "faillog",
+    # Debugging & tracing
+    "gdb", "gdbserver", "strace", "ltrace", "pmap", "pstack",
+    "sotruss", "mtrace", "catchsegv",
+    # Binary / ELF tools
+    "strings", "nm", "objdump", "objcopy", "readelf", "ar",
+    "xxd", "hexdump", "size", "strip", "elfedit", "ranlib",
+    "addr2line", "gcov", "gprof",
+    # Text / file processing
+    "bc", "column", "colrm", "envsubst", "iconv", "patch",
+    "base64", "base32", "cksum", "crc32", "shasum", "b2sum",
+    "diff3", "diffstat", "sdiff", "flipdiff", "interdiff", "lsdiff",
+    # System management
+    "crontab", "timedatectl", "hostnamectl", "localectl",
+    "lscpu", "lsmem", "lslocks", "lsns", "lsipc", "lslogins",
+    "lspci", "lsusb", "lshw", "udisksctl",
+    "top", "ionice", "chrt", "taskset", "flock",
+    "resizepart", "fallocate", "partx", "lsblk",
+    # PDF tools
+    "pdfdetach", "pdffonts", "pdfimages", "pdfinfo", "pdfseparate",
+    "pdfsig", "pdftocairo", "pdftohtml", "pdftoppm", "pdftops",
+    "pdftotext", "pdfunite",
+    # Audio
+    "pactl", "pacmd", "pulseaudio", "pacat",
+    # UUID / identifiers
+    "uuidgen", "uuidparse",
+    # Process management
+    "pgrep", "pkill", "pidof", "prtstat",
+    # Archives / compression
+    "funzip", "zipnote", "zipsplit", "zipgrep", "zipinfo",
+    # NetworkManager
+    "nm-online", "nm-applet", "nm-connection-editor",
+    # Hardware info
+    "dmidecode", "lspgpot",
+    # Desktop apps (useful CLI wrappers)
+    "firefox", "google-chrome", "google-chrome-stable", "thunderbird",
+    "libreoffice", "soffice", "evince", "eog", "gedit",
+    "nautilus", "obsidian", "remmina", "shotwell", "totem",
+    "zenity", "xmessage", "gdialog",
+    # Shell / terminal
+    "script", "scriptreplay", "scriptlive", "mesg", "setterm",
+    # Misc useful
+    "apropos", "whatis", "locale", "localedef",
+    "dconf", "gio", "gapplication",
+    "gpg-zip", "symcryptrun",
+    # Font utilities
+    "fc-list", "fc-cache", "fc-match", "fc-pattern", "fc-query",
+    "fc-scan", "fc-validate",
+    # Git internals (useful for scripting)
+    "git-receive-pack", "git-upload-archive", "git-shell",
+    # Package management
+    "dpkg", "snap", "snapctl",
+    # Additional networking
+    "ncat", "nc", "netcat",
+}
 
 # Flattened set of known binary names (for quick lookup in discover)
 _KNOWN_BINARIES = set(KNOWN_CLI_KB.keys())
@@ -466,7 +543,7 @@ _KNOWN_BINARIES = set(KNOWN_CLI_KB.keys())
 
 # ── helpers ────────────────────────────────────────────────────
 
-def _run(cmd, timeout=10):
+def _run(cmd, timeout=5):
     try:
         r = subprocess.run(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -532,7 +609,7 @@ def _fetch_help_text(binary, subcommand=None, light=False):
         return out.strip()[:16384]
 
     # bare invocation
-    code, out, err = _run([binary], timeout=10)
+    code, out, err = _run([binary], timeout=3)
     output = (out + err).strip()
     return output if output else ""
 
@@ -544,10 +621,10 @@ def _fetch_version(binary):
     "curl 7.58.0", "v22.14.0", "Python 3.6.9", "mihomo-cli v2.8.1"
     """
     try:
-        code, out, err = _run([binary, "--version"], timeout=5)
+        code, out, err = _run([binary, "--version"], timeout=3)
         output = (out + err).strip()
         if not output:
-            code, out, err = _run([binary, "-V"], timeout=5)
+            code, out, err = _run([binary, "-V"], timeout=3)
             output = (out + err).strip()
         if output:
             m = re.search(r'\d+\.\d+(?:\.\d+)?(?:[a-z]\d*)?', output)
@@ -708,7 +785,8 @@ def _extract_help(binary, light=False):
 
     for s in top_subs:
         name = s["name"]
-        sub_help = _fetch_help_text(binary, name)
+        sub_help = _run([binary, name, "--help"], timeout=3)
+        sub_help = (sub_help[1] + sub_help[2]).strip()
         sub_info = {
             "desc": s["desc"],
             "usage": _extract_usage(sub_help) if sub_help else "",
@@ -1178,11 +1256,8 @@ def cmd_discover(args):
     elif getattr(args, 'kb', False):
         scan_names = _KNOWN_BINARIES
 
-    # Exclude patterns (glob): skip matching names during scan.
-    # When --scan, automatically include system noise patterns.
-    exclude_pats = []
-    if args.scan:
-        exclude_pats.extend(_SYSTEM_NOISE_PATTERNS)
+    # Exclude patterns: system noise always applied in Phase 2
+    exclude_pats = list(_SYSTEM_NOISE_PATTERNS)
     if getattr(args, 'exclude', None):
         exclude_pats.extend(p.strip() for p in args.exclude.split(",") if p.strip())
 
@@ -1192,21 +1267,20 @@ def cmd_discover(args):
                 return True
         return False
 
-    # Determine which PATH dirs to scan
+    # PATH scanning: default = all dirs (with quality filter + noise patterns)
     all_path_dirs = [d for d in os.environ.get("PATH", "").split(os.pathsep) if Path(d).is_dir()]
     user_paths = {os.path.expanduser(p) for p in (
         "~/.local/bin", "~/.local/node/bin", "~/.npm-global/bin",
         "~/bin", "~/.nvm/current/bin", "~/.nix-profile/bin",
+        "/usr/local/bin",
     )}
-    # Always include /usr/local/bin for tools installed via make install / brew
-    user_paths.add("/usr/local/bin")
 
-    if args.scan or scan_names:
-        scan_paths = all_path_dirs
-    elif args.scan_path:
+    if args.scan_path:
         scan_paths = [args.scan_path]
-    else:
+    elif getattr(args, 'user_only', False):
         scan_paths = [d for d in all_path_dirs if d in user_paths]
+    else:
+        scan_paths = all_path_dirs
 
     # Phase 1: KB tools — scan ALL PATH, ALWAYS register (trusted, no quality check)
     for binary in sorted(_KNOWN_BINARIES):
@@ -1232,6 +1306,7 @@ def cmd_discover(args):
 
     for path_dir in scan_paths:
         d = Path(path_dir)
+        is_system = d.as_posix().startswith(("/usr/", "/bin/", "/snap/", "/sbin/"))
         if not d.is_dir():
             continue
         try:
@@ -1249,6 +1324,11 @@ def cmd_discover(args):
                     continue
                 if not (entry.is_file() and os.access(str(entry), os.X_OK)):
                     continue
+
+                # In system dirs: only try tools we explicitly know about
+                if is_system and not args.scan and not scan_names:
+                    if name not in _PROMISING_SYSTEM_NAMES:
+                        continue
                 seen.add(name)
 
                 # Quality filter for non-KB tools
@@ -1730,9 +1810,11 @@ def main():
     p = sub.add_parser("search", help="Search tools by keyword")
     p.add_argument("keyword", nargs="+", help="Keyword(s) to search for")
 
-    p = sub.add_parser("discover", help="Auto-discover CLI binaries (user paths, filtered)")
+    p = sub.add_parser("discover", help="Auto-discover CLI binaries (all PATH, filtered)")
     p.add_argument("--scan", action="store_true",
-                   help="Full PATH scan: all directories, no quality filter")
+                   help="Full scan without quality filtering")
+    p.add_argument("--user-only", action="store_true",
+                   help="Only scan user-installed paths (fast)")
     p.add_argument("--names", help="Comma-separated tool names to scan for (over PATH)")
     p.add_argument("--exclude", help="Comma-separated patterns to skip (glob). --scan auto-excludes system noise")
     p.add_argument("--kb", action="store_true",
